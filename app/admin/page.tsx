@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function AdminPage() {
   return (
-    <div data-admin-theme className="dark min-h-dvh bg-background text-foreground">
+    <div className="min-h-dvh bg-slate-50 text-slate-900 antialiased">
       <AdminDashboard />
     </div>
   )
