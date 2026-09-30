@@ -42,10 +42,16 @@ export function Hero() {
               Report an Issue
               <ArrowRight className="size-4" aria-hidden="true" />
             </ButtonLink>
-            <ButtonLink href="/admin" size="lg" variant="outline">
-              Enter Command Center
+            <ButtonLink href="/login?role=admin" size="lg" variant="outline">
+              Admin Login
             </ButtonLink>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Sign in to CleanSync
+            </Link>
+          </p>
           <dl className="mt-12 grid max-w-md grid-cols-3 gap-6">
             {[
               { value: '<60s', label: 'To file a report' },

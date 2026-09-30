@@ -29,10 +29,18 @@ export function EcosystemSection() {
               </li>
             ))}
           </ul>
-          <ButtonLink href="/citizen" variant="outline" className="mt-8 self-start">
-            Open Citizen Portal
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </ButtonLink>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <ButtonLink href="/citizen" variant="outline">
+              Open Citizen Portal
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </ButtonLink>
+            <Link
+              href="/login?role=citizen"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Sign in →
+            </Link>
+          </div>
         </div>
 
         <div className="flex flex-col rounded-2xl bg-primary p-8 text-primary-foreground">
@@ -53,13 +61,21 @@ export function EcosystemSection() {
               </li>
             ))}
           </ul>
-          <Link
-            href="/admin"
-            className="mt-8 inline-flex h-9 items-center gap-2 self-start rounded-xl bg-primary-foreground px-4 text-sm font-medium text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-          >
-            Enter Command Center
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              href="/login?role=admin"
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary-foreground px-4 text-sm font-medium text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+            >
+              Admin Sign In
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground hover:underline"
+            >
+              Command Center →
+            </Link>
+          </div>
         </div>
       </div>
     </section>

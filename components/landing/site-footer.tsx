@@ -3,6 +3,9 @@ import { Trophy } from 'lucide-react'
 import { Logo } from './shared'
 
 const footerLinks = [
+  { href: '/login', label: 'Sign In' },
+  { href: '/citizen', label: 'Citizen Portal' },
+  { href: '/login?role=admin', label: 'Admin Portal' },
   { href: '#', label: 'Privacy' },
   { href: '#', label: 'Terms' },
   { href: 'mailto:hello@cleansync.city', label: 'Contact' },

@@ -26,11 +26,17 @@ export function SiteHeader() {
             ))}
           </ul>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Log in
+          </Link>
           <ButtonLink href="/citizen" variant="outline" className="hidden sm:inline-flex">
             Citizen Portal
           </ButtonLink>
-          <ButtonLink href="/admin">Admin</ButtonLink>
+          <ButtonLink href="/login?role=admin">Admin Login</ButtonLink>
         </div>
       </div>
     </header>
