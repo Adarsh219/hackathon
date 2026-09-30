@@ -1,44 +1,23 @@
-import Link from 'next/link'
 import { Trophy } from 'lucide-react'
 import { Logo } from './shared'
 
-const footerLinks = [
-  { href: '/login', label: 'Sign In' },
-  { href: '/report', label: 'Citizen Portal' },
-  { href: '/login?role=admin', label: 'Admin Portal' },
-  { href: '#', label: 'Privacy' },
-  { href: '#', label: 'Terms' },
-  { href: 'mailto:hello@cleansync.city', label: 'Contact' },
-]
-
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/80 bg-background/60 backdrop-blur-lg">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12 md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="flex flex-col gap-3">
-          <Logo />
-          <p className="text-sm text-muted-foreground">
-            {'© 2026 CleanSync. Dispatch and operations for municipal sanitation.'}
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 md:items-end">
-          <nav aria-label="Footer">
-            <ul className="flex gap-6">
-              {footerLinks.map((link) => (
-                <li key={link.label}>
-                  <Link href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-primary/30 bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground md:self-end">
-            <Trophy className="size-3.5" aria-hidden="true" />
-            Built for SPECTRUM-2026 Innovation Hackathon
-          </span>
-        </div>
+    <footer className="flex flex-col sm:flex-row items-center justify-between py-6 border-t border-slate-200/80 mt-12 gap-4 text-xs text-slate-500 max-w-6xl mx-auto px-4 md:px-6 w-full">
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-3 text-center sm:text-left">
+        <Logo />
+        <span className="hidden sm:inline text-slate-300" aria-hidden="true">
+          ·
+        </span>
+        <span>© 2026 CleanSync. Dispatch and operations for municipal sanitation.</span>
       </div>
+      <span
+        aria-label="🏆 Built for SPECTRUM-2026 Innovation Hackathon"
+        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 shadow-xs"
+      >
+        <Trophy className="size-3.5 text-amber-500" aria-hidden="true" />
+        Built for SPECTRUM-2026 Innovation Hackathon
+      </span>
     </footer>
   )
 }
