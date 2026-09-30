@@ -34,6 +34,9 @@ export function TopBar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cleansync_user')
+    }
     setSessionUser(null)
     router.replace('/login')
   }

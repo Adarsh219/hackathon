@@ -14,33 +14,54 @@ export default function AdminPage() {
     let isMounted = true
 
     const checkAdminAccess = async () => {
-      // 1. Check Supabase session
-      const { data } = await supabase.auth.getSession()
-      const session = data?.session
-      const user = session?.user
+      let hasAdminAccess = false
 
-      // 2. Check localStorage demoAdmin / role flags
-      const demoAdminFlag =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('cleansync_admin_auth') === 'true'
-          : false
-      const userRole =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('cleansync_user_role')
-          : null
+      // 1. First inspect supabase.auth.getSession()
+      try {
+        const { data } = await supabase.auth.getSession()
+        const session = data?.session
+        const user = session?.user
 
-      const userEmail = (user?.email || '').toLowerCase()
-      const isGovEmail =
-        userEmail.endsWith('@gov.in') || userEmail.endsWith('@cleansync.gov')
-      const isAdminRole =
-        user?.role === 'admin' ||
-        (user?.user_metadata as any)?.role === 'admin' ||
-        userRole === 'admin'
+        if (session && user) {
+          const userEmail = (user.email || '').toLowerCase()
+          const isGovEmail =
+            userEmail.endsWith('@gov.in') || userEmail.endsWith('@cleansync.gov')
+          const isAdminRole =
+            user.role === 'admin' ||
+            (user.user_metadata as any)?.role === 'admin' ||
+            (typeof window !== 'undefined' && localStorage.getItem('cleansync_user_role') === 'admin')
 
-      const hasActiveAdminSession =
-        (!!session && (isGovEmail || isAdminRole)) || demoAdminFlag
+          if (isGovEmail || isAdminRole) {
+            hasAdminAccess = true
+          }
+        }
+      } catch {}
 
-      if (!hasActiveAdminSession) {
+      // 2. If empty or unverified in Supabase, check localStorage.getItem('cleansync_user')
+      if (!hasAdminAccess && typeof window !== 'undefined') {
+        try {
+          const storedUserRaw = localStorage.getItem('cleansync_user')
+          if (storedUserRaw) {
+            const storedUser = JSON.parse(storedUserRaw)
+            if (
+              storedUser?.role === 'admin' ||
+              storedUser?.email === 'admin@cleansync.gov' ||
+              storedUser?.email?.endsWith('@gov.in') ||
+              storedUser?.email?.endsWith('@cleansync.gov')
+            ) {
+              hasAdminAccess = true
+            }
+          }
+        } catch {}
+
+        // Fallback for demo admin flags
+        if (!hasAdminAccess && localStorage.getItem('cleansync_admin_auth') === 'true') {
+          hasAdminAccess = true
+        }
+      }
+
+      // 3. Only redirect to /login?role=admin if both Supabase session and localStorage demo session are absent
+      if (!hasAdminAccess) {
         if (isMounted) setIsAuthorized(false)
         router.replace('/login?role=admin')
       } else {
@@ -55,6 +76,7 @@ export default function AdminPage() {
     }
   }, [router])
 
+  // Prevent flash of unauthorized/login content while storage check resolves
   if (isAuthorized === null || !isAuthorized) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center gap-3">

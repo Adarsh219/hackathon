@@ -684,8 +684,25 @@ export function AdminDashboard() {
       const sessionRole = user?.role || (user?.user_metadata as any)?.role
       const isAdminRole = sessionRole === 'admin' || userRole === 'admin'
 
-      const hasActiveAdminSession =
+      let hasActiveAdminSession =
         (!!data?.session && (isGovEmail || isAdminRole)) || demoAdminFlag
+
+      if (!hasActiveAdminSession && typeof window !== 'undefined') {
+        try {
+          const storedUserRaw = localStorage.getItem('cleansync_user')
+          if (storedUserRaw) {
+            const storedUser = JSON.parse(storedUserRaw)
+            if (
+              storedUser?.role === 'admin' ||
+              storedUser?.email === 'admin@cleansync.gov' ||
+              storedUser?.email?.endsWith('@gov.in') ||
+              storedUser?.email?.endsWith('@cleansync.gov')
+            ) {
+              hasActiveAdminSession = true
+            }
+          }
+        } catch {}
+      }
 
       if (!hasActiveAdminSession) {
         if (isMounted) setIsAdminAuthenticated(false)
@@ -717,6 +734,9 @@ export function AdminDashboard() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cleansync_user')
+    }
     router.replace('/login')
   }
 

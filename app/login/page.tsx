@@ -126,6 +126,10 @@ function LoginForm() {
         const isDemoAdmin = identifier.trim() === 'admin' && password.trim() === 'admin123'
         if (isDemoAdmin) {
           if (typeof window !== 'undefined') {
+            localStorage.setItem(
+              'cleansync_user',
+              JSON.stringify({ role: 'admin', email: 'admin@cleansync.gov' })
+            )
             const adminSession = {
               access_token: `demo_admin_jwt_${Date.now()}`,
               token_type: 'bearer',
@@ -180,6 +184,9 @@ function LoginForm() {
           // Normal citizen rejected from Admin portal
           if (!isGovDomain && !hasAdminRole) {
             await supabase.auth.signOut()
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('cleansync_user')
+            }
             setError('Access Denied: Officer credentials required for dispatch command.')
             setIsLoading(false)
             return
@@ -187,6 +194,10 @@ function LoginForm() {
 
           // Officer authorized
           if (typeof window !== 'undefined') {
+            localStorage.setItem(
+              'cleansync_user',
+              JSON.stringify({ role: 'admin', email: userEmail || identifier.trim() })
+            )
             const sessionToStore = authData?.session || {
               access_token: `jwt_${Date.now()}`,
               token_type: 'bearer',
@@ -227,6 +238,10 @@ function LoginForm() {
           }
 
           if (typeof window !== 'undefined') {
+            localStorage.setItem(
+              'cleansync_user',
+              JSON.stringify({ role: 'admin', email: identifier.trim() })
+            )
             const sessionToStore = signUpData?.session || {
               access_token: `jwt_${Date.now()}`,
               token_type: 'bearer',
@@ -265,6 +280,10 @@ function LoginForm() {
         }
 
         if (typeof window !== 'undefined') {
+          localStorage.setItem(
+            'cleansync_user',
+            JSON.stringify({ role: 'citizen', email: identifier.trim() })
+          )
           const sessionToStore = authData?.session || {
             access_token: `jwt_${Date.now()}`,
             token_type: 'bearer',
@@ -315,6 +334,10 @@ function LoginForm() {
         }
 
         if (typeof window !== 'undefined') {
+          localStorage.setItem(
+            'cleansync_user',
+            JSON.stringify({ role: 'citizen', email: identifier.trim() })
+          )
           const sessionToStore = signUpData?.session || {
             access_token: `jwt_${Date.now()}`,
             token_type: 'bearer',

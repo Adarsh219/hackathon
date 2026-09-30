@@ -258,6 +258,7 @@ class SupabaseAuthClient {
         localStorage.removeItem('cleansync_admin_auth')
         localStorage.removeItem('cleansync_user_role')
         localStorage.removeItem('supabase_session')
+        localStorage.removeItem('cleansync_user')
         document.cookie = 'cleansync_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
         document.cookie = 'cleansync_admin=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
       } catch {}
