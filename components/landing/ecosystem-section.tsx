@@ -30,15 +30,15 @@ export function EcosystemSection() {
             ))}
           </ul>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <ButtonLink href="/login?role=citizen" variant="outline">
+            <ButtonLink href="/report" variant="outline">
               Open Citizen Portal
               <ArrowRight className="size-4" aria-hidden="true" />
             </ButtonLink>
             <Link
-              href="/login?role=citizen"
+              href="/report"
               className="text-sm font-medium text-primary hover:underline"
             >
-              Sign in →
+              Report an Issue →
             </Link>
           </div>
         </div>

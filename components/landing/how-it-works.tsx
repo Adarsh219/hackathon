@@ -41,7 +41,7 @@ export function HowItWorks() {
 
       <div className="mt-14 hidden grid-cols-2 gap-6 md:grid">
         <Link
-          href="/login?role=citizen"
+          href="/report"
           className="flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-secondary py-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
         >
           <Users className="size-3.5" />

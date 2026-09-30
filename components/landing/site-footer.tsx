@@ -4,7 +4,7 @@ import { Logo } from './shared'
 
 const footerLinks = [
   { href: '/login', label: 'Sign In' },
-  { href: '/login?role=citizen', label: 'Citizen Portal' },
+  { href: '/report', label: 'Citizen Portal' },
   { href: '/login?role=admin', label: 'Admin Portal' },
   { href: '#', label: 'Privacy' },
   { href: '#', label: 'Terms' },

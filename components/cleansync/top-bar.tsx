@@ -11,12 +11,14 @@ import { supabase } from '@/lib/supabase'
 
 export function TopBar() {
   const router = useRouter()
+  const [sessionUser, setSessionUser] = useState<any>(null)
   const [initials, setInitials] = useState('AR')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       const user = data?.session?.user
       if (user) {
+        setSessionUser(user)
         const name = user.user_metadata?.full_name || user.email || ''
         if (name) {
           const parts = name.trim().split(/\s+/)
@@ -32,6 +34,7 @@ export function TopBar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    setSessionUser(null)
     router.replace('/login')
   }
 
@@ -64,22 +67,33 @@ export function TopBar() {
             <span className="sr-only">Active city: </span>
             Downtown Sector
           </Badge>
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-secondary text-xs font-medium text-secondary-foreground">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="h-8 gap-1.5 rounded-lg border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-colors shadow-2xs cursor-pointer"
-            title="Sign out of CleanSync"
-          >
-            <LogOut className="size-3.5 text-slate-500" />
-            <span>Sign Out</span>
-          </Button>
+          {sessionUser ? (
+            <div className="flex items-center gap-2.5">
+              <Avatar className="size-8">
+                <AvatarFallback className="bg-secondary text-xs font-medium text-secondary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="h-8 gap-1.5 rounded-lg border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-colors shadow-2xs cursor-pointer"
+                title="Sign out of CleanSync"
+              >
+                <LogOut className="size-3.5 text-slate-500" />
+                <span>Sign Out</span>
+              </Button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-lg hover:bg-accent"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>

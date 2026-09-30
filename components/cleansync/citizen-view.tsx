@@ -1,50 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { TopBar } from '@/components/cleansync/top-bar'
 import { CitizenPortal } from '@/components/cleansync/citizen-portal'
 
 export function CitizenView() {
-  const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    let isMounted = true
-
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      const storedSession = typeof window !== 'undefined' ? localStorage.getItem('cleansync_session') : null
-      const userRole = typeof window !== 'undefined' ? localStorage.getItem('cleansync_user_role') : null
-
-      const hasSession = !!data?.session || !!storedSession || !!userRole
-
-      if (!hasSession) {
-        if (isMounted) setIsAuthenticated(false)
-        router.replace('/login?role=citizen')
-      } else {
-        if (isMounted) setIsAuthenticated(true)
-      }
-    }
-
-    checkSession()
-
-    return () => {
-      isMounted = false
-    }
-  }, [router])
-
-  if (isAuthenticated === null || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center gap-3">
-        <Loader2 className="size-8 text-emerald-600 animate-spin" />
-        <p className="text-sm font-medium text-slate-500">Checking authentication…</p>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-dvh bg-background">
       <TopBar />

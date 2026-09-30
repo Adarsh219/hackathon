@@ -42,7 +42,7 @@ export default function AdminPage() {
 
       if (!hasActiveAdminSession) {
         if (isMounted) setIsAuthorized(false)
-        router.replace('/login?role=admin&error=unauthorized')
+        router.replace('/login?role=admin')
       } else {
         if (isMounted) setIsAuthorized(true)
       }

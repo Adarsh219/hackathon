@@ -689,7 +689,7 @@ export function AdminDashboard() {
 
       if (!hasActiveAdminSession) {
         if (isMounted) setIsAdminAuthenticated(false)
-        router.replace('/login?role=admin&error=unauthorized')
+        router.replace('/login?role=admin')
       } else {
         if (isMounted) setIsAdminAuthenticated(true)
       }
