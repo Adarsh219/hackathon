@@ -31,12 +31,11 @@ export function SiteHeader() {
             href="/login"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            Log in
+            Sign In
           </Link>
-          <ButtonLink href="/login?role=citizen" variant="outline" className="hidden sm:inline-flex">
-            Citizen Portal
+          <ButtonLink href="/report">
+            Report an Issue
           </ButtonLink>
-          <ButtonLink href="/login?role=admin">Admin</ButtonLink>
         </div>
       </div>
     </header>

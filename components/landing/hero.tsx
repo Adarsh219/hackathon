@@ -7,28 +7,9 @@ export function Hero() {
     <section aria-labelledby="hero-title" className="mx-auto max-w-6xl px-4 pb-20 pt-16 md:px-6 md:pb-28 md:pt-24">
       <div className="grid items-center gap-14 lg:grid-cols-2">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/login?role=citizen"
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
-            >
-              <Users className="size-3.5" aria-hidden="true" />
-              Citizen Portal
-            </Link>
-            <span className="text-xs text-muted-foreground" aria-hidden="true">
-              +
-            </span>
-            <Link
-              href="/login?role=admin"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card/80"
-            >
-              <Building2 className="size-3.5" aria-hidden="true" />
-              Admin Operations
-            </Link>
-          </div>
           <h1
             id="hero-title"
-            className="mt-6 text-balance text-4xl font-semibold tracking-tight text-foreground md:text-5xl lg:text-6xl"
+            className="text-balance text-4xl font-semibold tracking-tight text-foreground md:text-5xl lg:text-6xl"
           >
             Frictionless citizen reporting. <span className="text-primary">Enterprise municipal dispatch.</span>
           </h1>
@@ -38,20 +19,14 @@ export function Hero() {
             dispatches the right crew.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/login?role=citizen" size="lg">
+            <ButtonLink href="/report" size="lg">
               Report an Issue
               <ArrowRight className="size-4" aria-hidden="true" />
             </ButtonLink>
             <ButtonLink href="/login?role=admin" size="lg" variant="outline">
-              Enter Command Center
+              Command Center
             </ButtonLink>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-primary hover:underline">
-              Sign in to CleanSync
-            </Link>
-          </p>
           <dl className="mt-12 grid max-w-md grid-cols-3 gap-6">
             {[
               { value: '<60s', label: 'To file a report' },
