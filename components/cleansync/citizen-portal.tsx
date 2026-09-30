@@ -26,7 +26,6 @@ export function CitizenPortal() {
   function handleTicketCreated(ticket: Ticket) {
     setTickets((prev) => [ticket, ...prev])
     setHighlightId(ticket.id)
-    setTab('track')
   }
 
   return (
@@ -46,7 +45,11 @@ export function CitizenPortal() {
       </TabsList>
 
       <TabsContent value="report">
-        <ReportIssueForm onCreated={handleTicketCreated} nextNumber={105 + tickets.length - INITIAL_TICKETS.length} />
+        <ReportIssueForm
+          onCreated={handleTicketCreated}
+          onViewTracker={() => setTab('track')}
+          nextNumber={105 + tickets.length - INITIAL_TICKETS.length}
+        />
       </TabsContent>
       <TabsContent value="track">
         <TrackComplaints tickets={tickets} highlightId={highlightId} />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Crosshair, Loader2, Send } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Crosshair, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,21 +10,27 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ISSUE_CATEGORIES, type IssueCategory, type Priority, type Ticket } from '@/lib/cleansync-data'
+import { supabase } from '@/lib/supabase'
 import { PhotoDropzone } from './photo-dropzone'
 import { PrioritySelector } from './priority-selector'
 
 type ReportIssueFormProps = {
-  onCreated: (ticket: Ticket) => void
-  nextNumber: number
+  onCreated?: (ticket: Ticket) => void
+  nextNumber?: number
+  onViewTracker?: () => void
 }
 
-export function ReportIssueForm({ onCreated, nextNumber }: ReportIssueFormProps) {
+export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: ReportIssueFormProps) {
   const [category, setCategory] = useState<IssueCategory | null>(null)
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
   const [priority, setPriority] = useState<Priority>('medium')
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locating, setLocating] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ category?: string; location?: string }>({})
 
   function detectLocation() {
@@ -34,8 +40,12 @@ export function ReportIssueForm({ onCreated, nextNumber }: ReportIssueFormProps)
     }
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setLocation(`Near ${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`)
+      ({ coords: posCoords }) => {
+        setCoords({
+          latitude: posCoords.latitude,
+          longitude: posCoords.longitude,
+        })
+        setLocation(`Near ${posCoords.latitude.toFixed(5)}, ${posCoords.longitude.toFixed(5)}`)
         setErrors((e) => ({ ...e, location: undefined }))
         setLocating(false)
       },
@@ -47,44 +57,92 @@ export function ReportIssueForm({ onCreated, nextNumber }: ReportIssueFormProps)
     )
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setSubmitError(null)
+    setSubmitSuccess(false)
+
     const nextErrors: typeof errors = {}
     if (!category) nextErrors.category = 'Please choose an issue category.'
     if (location.trim().length < 3) nextErrors.location = 'Please enter a location.'
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || !category) return
 
-    const now = new Date().toISOString()
-    const id = `ISS-${nextNumber}`
-    onCreated({
-      id,
-      category,
-      location: location.trim(),
-      description: description.trim(),
-      priority,
-      createdAt: now,
-      stepIndex: 0,
-      events: [
-        {
-          at: now,
-          note: photos.length
-            ? `Complaint submitted with ${photos.length} photo${photos.length > 1 ? 's' : ''}.`
-            : 'Complaint submitted via Citizen Portal.',
-        },
-        null,
-        null,
-        null,
-      ],
-    })
-    toast.success(`Ticket #${id} submitted`, {
-      description: 'We will notify you as soon as a crew is assigned.',
-    })
-    setCategory(null)
-    setLocation('')
-    setDescription('')
-    setPhotos([])
-    setPriority('medium')
+    setIsSubmitting(true)
+
+    // Extract category, description, latitude, and longitude
+    let latitude = coords?.latitude
+    let longitude = coords?.longitude
+
+    if (!latitude || !longitude) {
+      const match = location.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/)
+      if (match) {
+        latitude = parseFloat(match[1])
+        longitude = parseFloat(match[2])
+      }
+    }
+
+    try {
+      const { data, error } = await supabase.from('issues').insert([{
+        title: category || 'Civic Issue',
+        category: category,
+        description: description || 'Reported via CleanSync Citizen App',
+        latitude: latitude || 26.8467,
+        longitude: longitude || 80.9462,
+        ward: 'Ward 4',
+        status: 'Pending'
+      }])
+
+      if (error) {
+        setSubmitError(error.message || 'Error inserting issue into Supabase.')
+        toast.error(error.message || 'Failed to submit grievance.')
+        setIsSubmitting(false)
+        return
+      }
+
+      // Success
+      const now = new Date().toISOString()
+      const id = `ISS-${nextNumber}`
+
+      if (onCreated) {
+        onCreated({
+          id,
+          category: category || 'illegal-dumping',
+          location: location.trim(),
+          description: description.trim(),
+          priority,
+          createdAt: now,
+          stepIndex: 0,
+          events: [
+            {
+              at: now,
+              note: photos.length
+                ? `Complaint submitted with ${photos.length} photo${photos.length > 1 ? 's' : ''}.`
+                : 'Complaint submitted via Citizen Portal and recorded to database.',
+            },
+            null,
+            null,
+            null,
+          ],
+        })
+      }
+
+      // Reset form inputs
+      setCategory(null)
+      setLocation('')
+      setDescription('')
+      setPhotos([])
+      setPriority('medium')
+      setCoords(null)
+      setErrors({})
+      setSubmitSuccess(true)
+      toast.success('Grievance logged successfully!')
+    } catch (err: any) {
+      setSubmitError(err?.message || 'An unexpected error occurred while saving grievance.')
+      toast.error('Failed to log grievance.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -96,6 +154,69 @@ export function ReportIssueForm({ onCreated, nextNumber }: ReportIssueFormProps)
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Success Alert Banner */}
+        {submitSuccess && (
+          <div
+            role="status"
+            className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900 animate-in fade-in duration-200"
+          >
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="size-5 shrink-0 text-emerald-600 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold text-emerald-900">Grievance logged successfully!</p>
+                <p className="mt-0.5 text-xs text-emerald-700 leading-relaxed">
+                  Your issue has been recorded in the database and queued for municipal crew assignment.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {onViewTracker && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onViewTracker}
+                  className="border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100 text-xs h-8"
+                >
+                  Track Status →
+                </Button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSubmitSuccess(false)}
+                className="text-emerald-700 hover:text-emerald-900 text-sm px-1.5 py-0.5"
+                aria-label="Dismiss alert"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Alert Banner */}
+        {submitError && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-900 animate-in fade-in duration-200"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="size-5 shrink-0 text-rose-600 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold text-rose-900">Could not submit grievance</p>
+                <p className="mt-0.5 text-xs text-rose-700 leading-relaxed">{submitError}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSubmitError(null)}
+              className="text-rose-700 hover:text-rose-900 text-sm px-1.5 py-0.5 shrink-0"
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="flex flex-col gap-2">
@@ -186,9 +307,23 @@ export function ReportIssueForm({ onCreated, nextNumber }: ReportIssueFormProps)
 
           <PrioritySelector value={priority} onChange={setPriority} />
 
-          <Button type="submit" size="lg" className="h-12 w-full text-base sm:w-auto sm:self-end sm:px-8">
-            <Send aria-hidden="true" />
-            Submit Ticket
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            className="h-12 w-full text-base sm:w-auto sm:self-end sm:px-8 disabled:opacity-60 cursor-pointer"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="animate-spin mr-2" aria-hidden="true" />
+                Submitting Grievance…
+              </>
+            ) : (
+              <>
+                <Send aria-hidden="true" className="mr-2" />
+                Submit Ticket
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

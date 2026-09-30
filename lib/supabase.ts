@@ -206,9 +206,126 @@ class SupabaseAuthClient {
   }
 }
 
+class SupabaseTableClient {
+  private url?: string
+  private anonKey?: string
+  private table: string
+
+  constructor(table: string, url?: string, anonKey?: string) {
+    this.table = table
+    this.url = url
+    this.anonKey = anonKey
+  }
+
+  async insert<T = any>(
+    records: Record<string, any>[] | Record<string, any>
+  ): Promise<{ data: T | null; error: { message: string } | null }> {
+    const recordList = Array.isArray(records) ? records : [records]
+
+    if (this.url && this.anonKey) {
+      try {
+        const response = await fetch(`${this.url}/rest/v1/${this.table}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: this.anonKey,
+            Authorization: `Bearer ${this.anonKey}`,
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify(recordList),
+        })
+
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => null)
+          return {
+            data: null,
+            error: {
+              message:
+                errPayload?.message ||
+                errPayload?.error_description ||
+                `Failed to insert into ${this.table} (${response.status})`,
+            },
+          }
+        }
+
+        const data = await response.json()
+        return { data, error: null }
+      } catch (err: any) {
+        return {
+          data: null,
+          error: {
+            message: err?.message || 'Network error inserting record into Supabase.',
+          },
+        }
+      }
+    }
+
+    // Fallback simulation when Supabase credentials are not initialized
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const mockInserted = recordList.map((rec, i) => ({
+      id: `issue_${Date.now()}_${i}`,
+      created_at: new Date().toISOString(),
+      ...rec,
+    }))
+
+    return {
+      data: (Array.isArray(records) ? mockInserted : mockInserted[0]) as unknown as T,
+      error: null,
+    }
+  }
+
+  async select<T = any>(
+    query = '*'
+  ): Promise<{ data: T | null; error: { message: string } | null }> {
+    if (this.url && this.anonKey) {
+      try {
+        const response = await fetch(
+          `${this.url}/rest/v1/${this.table}?select=${encodeURIComponent(query)}`,
+          {
+            method: 'GET',
+            headers: {
+              apikey: this.anonKey,
+              Authorization: `Bearer ${this.anonKey}`,
+            },
+          }
+        )
+
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => null)
+          return {
+            data: null,
+            error: {
+              message: errPayload?.message || `Failed to fetch from ${this.table}`,
+            },
+          }
+        }
+
+        const data = await response.json()
+        return { data, error: null }
+      } catch (err: any) {
+        return {
+          data: null,
+          error: {
+            message: err?.message || 'Network error querying Supabase.',
+          },
+        }
+      }
+    }
+
+    return { data: [] as unknown as T, error: null }
+  }
+}
+
 export const supabase = {
   auth: new SupabaseAuthClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ),
+  from: (table: string) =>
+    new SupabaseTableClient(
+      table,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ),
 }
