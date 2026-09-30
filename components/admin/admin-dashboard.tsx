@@ -193,36 +193,46 @@ export function StatCards() {
         const Icon = s.icon
         const Trend = 'trend' in s ? (s.trend === 'up' ? TrendingUp : TrendingDown) : null
         return (
-          <Card key={s.label} className="gap-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm py-0">
-            <CardContent className="flex flex-col gap-2 p-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-slate-500">{s.label}</span>
-                <span
-                  className={cn(
-                    'flex size-8 items-center justify-center rounded-xl shadow-2xs',
-                    STAT_TONE[s.tone],
-                  )}
-                >
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
-              </div>
-              <div className="flex items-baseline gap-1.5 mt-2">
-                <span className="text-2xl font-semibold tabular-nums tracking-tight text-slate-900 sm:text-3xl">
-                  {s.value}
-                </span>
-                {'unit' in s && <span className="text-sm font-medium text-slate-500">{s.unit}</span>}
-              </div>
+          <div
+            key={s.label}
+            className="p-6 flex flex-col justify-between rounded-2xl bg-white border border-slate-200 shadow-sm"
+          >
+            {/* Top row */}
+            <div className="flex items-start justify-between">
+              <span className="text-sm font-medium text-slate-500">{s.label}</span>
               <span
                 className={cn(
-                  'mt-2 flex items-center gap-1 text-xs font-medium',
-                  s.tone === 'warn' ? 'text-amber-700' : Trend ? 'text-emerald-600' : 'text-slate-500',
+                  'flex size-8 items-center justify-center rounded-xl shadow-2xs',
+                  STAT_TONE[s.tone],
                 )}
               >
-                {Trend && <Trend className="size-3.5" aria-hidden="true" />}
-                {s.note}
+                <Icon className="size-4" aria-hidden="true" />
               </span>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Value row */}
+            <div className="mt-3 mb-2 flex items-baseline">
+              <span className="text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+                {s.value}
+              </span>
+              {'unit' in s && (
+                <span className="text-sm font-normal text-slate-500 ml-1.5">
+                  {s.unit}
+                </span>
+              )}
+            </div>
+
+            {/* Subtitle row */}
+            <div
+              className={cn(
+                'flex items-center gap-1 text-xs font-medium',
+                s.tone === 'warn' ? 'text-amber-700' : Trend ? 'text-emerald-600' : 'text-slate-500',
+              )}
+            >
+              {Trend && <Trend className="size-3.5" aria-hidden="true" />}
+              <span>{s.note}</span>
+            </div>
+          </div>
         )
       })}
     </section>
