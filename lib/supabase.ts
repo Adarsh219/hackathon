@@ -101,10 +101,13 @@ class SupabaseAuthClient {
     // Fallback simulation when Supabase credentials are not initialized
     await new Promise((resolve) => setTimeout(resolve, 300))
 
+    const lowerEmail = trimmedEmail.toLowerCase()
+    const isGov = lowerEmail.endsWith('@gov.in') || lowerEmail.endsWith('@cleansync.gov')
     const mockUser: SupabaseAuthUser = {
       id: `usr_${Math.random().toString(36).substring(2, 10)}`,
       email: trimmedEmail,
-      user_metadata: { email: trimmedEmail },
+      role: isGov ? 'admin' : 'citizen',
+      user_metadata: { email: trimmedEmail, role: isGov ? 'admin' : 'citizen' },
     }
 
     const mockSession: SupabaseAuthSession = {

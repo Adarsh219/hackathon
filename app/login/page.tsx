@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase'
 type Role = 'citizen' | 'admin'
 type Mode = 'signin' | 'signup'
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const SECTORS = [
   { value: 'Downtown Sector', label: 'Downtown Sector' },
   { value: 'Sector 4 Market', label: 'Sector 4 Market (Ward 4)' },
@@ -38,7 +40,9 @@ function LoginForm() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // UI state
+  // Validation & UI state
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -51,11 +55,18 @@ function LoginForm() {
     } else if (p === 'citizen') {
       setRole('citizen')
     }
+
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'unauthorized') {
+      setError('Access Denied: Officer credentials required for dispatch command.')
+    }
   }, [searchParams])
 
   const handleRoleChange = (newRole: Role) => {
     setRole(newRole)
     setError(null)
+    setEmailError(null)
+    setPasswordError(null)
     setSuccessMessage(null)
     router.replace(`/login?role=${newRole}`)
   }
@@ -64,52 +75,184 @@ function LoginForm() {
     setIdentifier('admin')
     setPassword('admin123')
     setError(null)
+    setEmailError(null)
+    setPasswordError(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setSuccessMessage(null)
+
+    // 1. Prevent empty form submissions
+    if (!identifier.trim() || !password.trim()) {
+      if (role === 'citizen' && !identifier.trim()) {
+        setEmailError('Please provide a valid email address (e.g. name@domain.com)')
+      }
+      if (!password.trim()) {
+        setPasswordError('Password must be at least 6 characters long.')
+      }
+      setError('Please fill in all required credentials.')
+      return
+    }
+
+    // 2. Strict validation for Citizen
+    if (role === 'citizen') {
+      if (!EMAIL_REGEX.test(identifier.trim())) {
+        setEmailError('Please provide a valid email address (e.g. name@domain.com)')
+        setError('Please provide a valid email address (e.g. name@domain.com)')
+        return
+      }
+      if (password.length < 6) {
+        setPasswordError('Password must be at least 6 characters long.')
+        setError('Password must be at least 6 characters long.')
+        return
+      }
+    }
+
+    // 3. Password length check for Admin real auth
+    if (role === 'admin' && identifier.trim() !== 'admin' && password.length < 6) {
+      setPasswordError('Password must be at least 6 characters long.')
+      setError('Password must be at least 6 characters long.')
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      // 1. Check for Demo Admin bypass
-      const isDemoAdmin =
-        (role === 'admin' || identifier.trim() === 'admin') &&
-        identifier.trim() === 'admin' &&
-        password.trim() === 'admin123'
-
-      if (isDemoAdmin) {
-        if (typeof window !== 'undefined') {
-          const adminSession = {
-            access_token: `demo_admin_jwt_${Date.now()}`,
-            token_type: 'bearer',
-            user: {
-              id: 'usr_admin_demo',
-              email: 'admin@cleansync.city',
-              role: 'admin',
-              user_metadata: { role: 'admin', full_name: 'System Administrator' },
-            },
+      // 4. Admin Tab Logic & RBAC Enforcement
+      if (role === 'admin') {
+        // Criterion A: Demo bypass (admin / admin123 grants officer access)
+        const isDemoAdmin = identifier.trim() === 'admin' && password.trim() === 'admin123'
+        if (isDemoAdmin) {
+          if (typeof window !== 'undefined') {
+            const adminSession = {
+              access_token: `demo_admin_jwt_${Date.now()}`,
+              token_type: 'bearer',
+              user: {
+                id: 'usr_admin_demo',
+                email: 'admin@cleansync.gov',
+                role: 'admin',
+                user_metadata: { role: 'admin', full_name: 'Chief Dispatch Officer' },
+              },
+            }
+            localStorage.setItem('cleansync_session', JSON.stringify(adminSession))
+            localStorage.setItem('cleansync_admin_auth', 'true')
+            localStorage.setItem('cleansync_user_role', 'admin')
+            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
+            document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
           }
-          localStorage.setItem('cleansync_session', JSON.stringify(adminSession))
-          localStorage.setItem('cleansync_admin_auth', 'true')
-          localStorage.setItem('cleansync_user_role', 'admin')
-          document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
-          document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
-        }
-        await new Promise((r) => setTimeout(r, 400))
-        router.push('/admin')
-        return
-      }
-
-      if (mode === 'signin') {
-        // Sign-in mode
-        if (!identifier.trim() || !password.trim()) {
-          setError('Please provide both credentials to sign in.')
-          setIsLoading(false)
+          await new Promise((r) => setTimeout(r, 400))
+          router.push('/admin')
           return
         }
 
+        // Criterion B: Real Auth under Admin tab
+        if (mode === 'signup') {
+          const lowerEmail = identifier.trim().toLowerCase()
+          const isGovDomain = lowerEmail.endsWith('@gov.in') || lowerEmail.endsWith('@cleansync.gov')
+          if (!isGovDomain) {
+            setError(
+              'Access Denied: Officer credentials required for dispatch command. Official email must end in @gov.in or @cleansync.gov.'
+            )
+            setIsLoading(false)
+            return
+          }
+        }
+
+        if (mode === 'signin') {
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: identifier.trim(),
+            password: password.trim(),
+          })
+
+          if (authError) {
+            setError(authError.message || 'Invalid credentials. Please verify and try again.')
+            setIsLoading(false)
+            return
+          }
+
+          const user = authData?.user
+          const userEmail = (user?.email || identifier.trim()).toLowerCase()
+          const isGovDomain = userEmail.endsWith('@gov.in') || userEmail.endsWith('@cleansync.gov')
+          const hasAdminRole = user?.role === 'admin' || (user?.user_metadata as any)?.role === 'admin'
+
+          // Normal citizen rejected from Admin portal
+          if (!isGovDomain && !hasAdminRole) {
+            await supabase.auth.signOut()
+            setError('Access Denied: Officer credentials required for dispatch command.')
+            setIsLoading(false)
+            return
+          }
+
+          // Officer authorized
+          if (typeof window !== 'undefined') {
+            const sessionToStore = authData?.session || {
+              access_token: `jwt_${Date.now()}`,
+              token_type: 'bearer',
+              user: user || {
+                id: `usr_${Date.now()}`,
+                email: identifier.trim(),
+                role: 'admin',
+                user_metadata: { role: 'admin' },
+              },
+            }
+            localStorage.setItem('cleansync_session', JSON.stringify(sessionToStore))
+            localStorage.setItem('cleansync_admin_auth', 'true')
+            localStorage.setItem('cleansync_user_role', 'admin')
+            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
+            document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
+          }
+
+          router.push('/admin')
+          return
+        } else {
+          // Officer sign-up
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: identifier.trim(),
+            password: password.trim(),
+            options: {
+              data: {
+                full_name: fullName.trim(),
+                sector,
+                role: 'admin',
+              },
+            },
+          })
+
+          if (signUpError) {
+            setError(signUpError.message || 'Failed to create officer account.')
+            setIsLoading(false)
+            return
+          }
+
+          if (typeof window !== 'undefined') {
+            const sessionToStore = signUpData?.session || {
+              access_token: `jwt_${Date.now()}`,
+              token_type: 'bearer',
+              user: signUpData?.user || {
+                id: `usr_${Date.now()}`,
+                email: identifier.trim(),
+                role: 'admin',
+                user_metadata: { full_name: fullName.trim(), sector, role: 'admin' },
+              },
+            }
+            localStorage.setItem('cleansync_session', JSON.stringify(sessionToStore))
+            localStorage.setItem('cleansync_admin_auth', 'true')
+            localStorage.setItem('cleansync_user_role', 'admin')
+            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
+            document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
+          }
+
+          setSuccessMessage('Officer account created successfully! Redirecting…')
+          await new Promise((r) => setTimeout(r, 500))
+          router.push('/admin')
+          return
+        }
+      }
+
+      // 5. Citizen Flow
+      if (mode === 'signin') {
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: identifier.trim(),
           password: password.trim(),
@@ -128,44 +271,21 @@ function LoginForm() {
             user: authData?.user || {
               id: `usr_${Date.now()}`,
               email: identifier.trim(),
-              role,
+              role: 'citizen',
             },
           }
           localStorage.setItem('cleansync_session', JSON.stringify(sessionToStore))
-          localStorage.setItem('cleansync_user_role', role)
+          localStorage.setItem('cleansync_user_role', 'citizen')
+          localStorage.removeItem('cleansync_admin_auth')
           document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
-
-          if (role === 'admin') {
-            localStorage.setItem('cleansync_admin_auth', 'true')
-            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
-          } else {
-            localStorage.removeItem('cleansync_admin_auth')
-            document.cookie = 'cleansync_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-          }
+          document.cookie = 'cleansync_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
         }
 
-        // On success: route appropriately
-        if (role === 'admin') {
-          router.push('/admin')
-        } else {
-          router.push('/report')
-        }
+        router.push('/report')
       } else {
-        // Sign-up mode
+        // Citizen signup
         if (!fullName.trim()) {
           setError('Please enter your full name.')
-          setIsLoading(false)
-          return
-        }
-
-        if (!identifier.trim()) {
-          setError('Please provide an email or phone number.')
-          setIsLoading(false)
-          return
-        }
-
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters long.')
           setIsLoading(false)
           return
         }
@@ -183,7 +303,7 @@ function LoginForm() {
             data: {
               full_name: fullName.trim(),
               sector,
-              role,
+              role: 'citizen',
             },
           },
         })
@@ -201,31 +321,20 @@ function LoginForm() {
             user: signUpData?.user || {
               id: `usr_${Date.now()}`,
               email: identifier.trim(),
-              role,
-              user_metadata: { full_name: fullName.trim(), sector, role },
+              role: 'citizen',
+              user_metadata: { full_name: fullName.trim(), sector, role: 'citizen' },
             },
           }
           localStorage.setItem('cleansync_session', JSON.stringify(sessionToStore))
-          localStorage.setItem('cleansync_user_role', role)
+          localStorage.setItem('cleansync_user_role', 'citizen')
+          localStorage.removeItem('cleansync_admin_auth')
           document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
-
-          if (role === 'admin') {
-            localStorage.setItem('cleansync_admin_auth', 'true')
-            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
-          } else {
-            localStorage.removeItem('cleansync_admin_auth')
-            document.cookie = 'cleansync_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-          }
+          document.cookie = 'cleansync_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
         }
 
         setSuccessMessage('Account created successfully! Redirecting…')
-        await new Promise((r) => setTimeout(r, 600))
-
-        if (role === 'admin') {
-          router.push('/admin')
-        } else {
-          router.push('/report')
-        }
+        await new Promise((r) => setTimeout(r, 500))
+        router.push('/report')
       }
     } catch (err: any) {
       setError(err?.message || 'An unexpected error occurred. Please try again.')
@@ -233,6 +342,8 @@ function LoginForm() {
       setIsLoading(false)
     }
   }
+
+  const isSubmitDisabled = isLoading || !identifier.trim() || !password.trim()
 
   return (
     <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-sm p-8 flex flex-col gap-6">
@@ -252,7 +363,7 @@ function LoginForm() {
           {mode === 'signup'
             ? role === 'citizen'
               ? 'Join your neighbourhood to report and track local waste issues.'
-              : 'Register an authority account for sanitation management.'
+              : 'Register an official authority account for dispatch operations.'
             : role === 'citizen'
               ? 'Sign in to report issues and track your complaints.'
               : 'Sign in to manage municipal dispatches and crews.'}
@@ -296,7 +407,7 @@ function LoginForm() {
           className="bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl p-3 flex items-start gap-2 animate-in fade-in duration-150"
         >
           <AlertCircle className="size-4 shrink-0 text-rose-600 mt-0.5" />
-          <span className="leading-relaxed">{error}</span>
+          <span className="leading-relaxed font-medium">{error}</span>
         </div>
       )}
 
@@ -351,17 +462,46 @@ function LoginForm() {
 
         <div>
           <label htmlFor="identifier" className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1 block">
-            {role === 'citizen' ? 'Email or phone' : 'Admin ID or work email'}
+            {role === 'citizen' ? 'Email Address' : 'Admin ID or Officer Work Email'}
           </label>
           <input
             id="identifier"
             type="text"
             required
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder={role === 'citizen' ? 'citizen@cleansync.city' : 'admin@cleansync.city or admin'}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+            onChange={(e) => {
+              const val = e.target.value
+              setIdentifier(val)
+              if (role === 'citizen') {
+                if (val.trim() && !EMAIL_REGEX.test(val.trim())) {
+                  setEmailError('Please provide a valid email address (e.g. name@domain.com)')
+                } else {
+                  setEmailError(null)
+                }
+              } else {
+                setEmailError(null)
+              }
+            }}
+            onBlur={() => {
+              if (role === 'citizen') {
+                if (!identifier.trim() || !EMAIL_REGEX.test(identifier.trim())) {
+                  setEmailError('Please provide a valid email address (e.g. name@domain.com)')
+                } else {
+                  setEmailError(null)
+                }
+              }
+            }}
+            placeholder={role === 'citizen' ? 'citizen@cleansync.city' : 'officer@gov.in or admin'}
+            className={`w-full px-3.5 py-2.5 bg-white border ${
+              emailError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-emerald-500'
+            } rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:border-transparent text-sm transition-all`}
           />
+          {emailError && (
+            <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1 animate-in fade-in duration-150">
+              <AlertCircle className="size-3.5 shrink-0" />
+              <span>{emailError}</span>
+            </p>
+          )}
         </div>
 
         <div>
@@ -374,19 +514,40 @@ function LoginForm() {
               type={showPassword ? 'text' : 'password'}
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value
+                setPassword(val)
+                if (val.length > 0 && val.length < 6) {
+                  setPasswordError('Password must be at least 6 characters long.')
+                } else {
+                  setPasswordError(null)
+                }
+              }}
+              onBlur={() => {
+                if (password.length > 0 && password.length < 6) {
+                  setPasswordError('Password must be at least 6 characters long.')
+                }
+              }}
               placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 pr-10 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+              className={`w-full px-3.5 py-2.5 pr-10 bg-white border ${
+                passwordError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-emerald-500'
+              } rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:border-transparent text-sm transition-all`}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
+          {passwordError && (
+            <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1 animate-in fade-in duration-150">
+              <AlertCircle className="size-3.5 shrink-0" />
+              <span>{passwordError}</span>
+            </p>
+          )}
         </div>
 
         {mode === 'signup' && (
@@ -407,7 +568,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                 aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
               >
                 {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -431,7 +592,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => setError('Password reset instructions will be sent to your registered address.')}
-              className="text-slate-500 hover:text-slate-700 font-medium transition-colors"
+              className="text-slate-500 hover:text-slate-700 font-medium transition-colors cursor-pointer"
             >
               Forgot password?
             </button>
@@ -454,8 +615,8 @@ function LoginForm() {
         {/* Primary Action Button */}
         <button
           type="submit"
-          disabled={isLoading}
-          className="mt-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition-all text-sm flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          disabled={isSubmitDisabled}
+          className="mt-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition-all text-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isLoading ? (
             <>
@@ -486,6 +647,8 @@ function LoginForm() {
               onClick={() => {
                 setMode('signup')
                 setError(null)
+                setEmailError(null)
+                setPasswordError(null)
                 setSuccessMessage(null)
               }}
               className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
@@ -501,6 +664,8 @@ function LoginForm() {
               onClick={() => {
                 setMode('signin')
                 setError(null)
+                setEmailError(null)
+                setPasswordError(null)
                 setSuccessMessage(null)
               }}
               className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"

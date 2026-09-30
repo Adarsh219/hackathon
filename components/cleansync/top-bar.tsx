@@ -32,7 +32,7 @@ export function TopBar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.replace('/login?role=citizen')
+    router.replace('/login')
   }
 
   return (
@@ -71,14 +71,14 @@ export function TopBar() {
           </Avatar>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="h-8 gap-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
-            title="Log out of Citizen Portal"
+            className="h-8 gap-1.5 rounded-lg border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-colors shadow-2xs cursor-pointer"
+            title="Sign out of CleanSync"
           >
-            <LogOut className="size-3.5" />
-            <span className="hidden sm:inline">Log Out</span>
+            <LogOut className="size-3.5 text-slate-500" />
+            <span>Sign Out</span>
           </Button>
         </div>
       </div>

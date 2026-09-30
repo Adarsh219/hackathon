@@ -157,14 +157,14 @@ export function AdminHeader({ query, onQueryChange, ward, onWardChange, onSignOu
 
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={onSignOut}
-            className="h-9 gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 shadow-xs cursor-pointer"
-            title="Sign out of Admin Operations"
+            className="h-9 gap-1.5 rounded-lg border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-colors shadow-2xs cursor-pointer"
+            title="Sign out of CleanSync"
           >
-            <LogOut className="size-3.5" />
-            <span className="hidden sm:inline">Sign Out</span>
+            <LogOut className="size-3.5 text-slate-500" />
+            <span>Sign Out</span>
           </Button>
         </div>
       </div>
@@ -668,18 +668,28 @@ export function AdminDashboard() {
 
     const checkAdminAuth = async () => {
       const { data } = await supabase.auth.getSession()
-      const adminAuthFlag = typeof window !== 'undefined' ? localStorage.getItem('cleansync_admin_auth') : null
-      const userRole = typeof window !== 'undefined' ? localStorage.getItem('cleansync_user_role') : null
-      const sessionRole = data?.session?.user?.role || (data?.session?.user?.user_metadata as any)?.role
+      const demoAdminFlag =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('cleansync_admin_auth') === 'true'
+          : false
+      const userRole =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('cleansync_user_role')
+          : null
 
-      const hasAdminAuth =
-        adminAuthFlag === 'true' ||
-        userRole === 'admin' ||
-        sessionRole === 'admin'
+      const user = data?.session?.user
+      const userEmail = (user?.email || '').toLowerCase()
+      const isGovEmail =
+        userEmail.endsWith('@gov.in') || userEmail.endsWith('@cleansync.gov')
+      const sessionRole = user?.role || (user?.user_metadata as any)?.role
+      const isAdminRole = sessionRole === 'admin' || userRole === 'admin'
 
-      if (!hasAdminAuth) {
+      const hasActiveAdminSession =
+        (!!data?.session && (isGovEmail || isAdminRole)) || demoAdminFlag
+
+      if (!hasActiveAdminSession) {
         if (isMounted) setIsAdminAuthenticated(false)
-        router.replace('/login?role=admin')
+        router.replace('/login?role=admin&error=unauthorized')
       } else {
         if (isMounted) setIsAdminAuthenticated(true)
       }
@@ -707,7 +717,7 @@ export function AdminDashboard() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.replace('/login?role=admin')
+    router.replace('/login')
   }
 
   const handleReject = async (id: string) => {
