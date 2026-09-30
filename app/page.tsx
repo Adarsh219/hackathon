@@ -5,7 +5,7 @@ import { FeaturesSection } from '@/components/landing/features-section'
 import { HowItWorks } from '@/components/landing/how-it-works'
 import { EcosystemSection } from '@/components/landing/ecosystem-section'
 import { SiteFooter } from '@/components/landing/site-footer'
-import { AwarenessHub } from '@/components/cleansync/awareness-hub'
+import { WasteAwarenessSection } from '@/components/landing/waste-awareness-section'
 
 export default function Page() {
   return (
@@ -16,11 +16,7 @@ export default function Page() {
         <ProblemSection />
         <FeaturesSection />
         <HowItWorks />
-        <section className="w-full max-w-6xl mx-auto px-4 sm:px-6 my-16">
-          <div className="border border-slate-200/80 bg-white/70 backdrop-blur-md rounded-3xl p-6 sm:p-8 shadow-sm">
-            <AwarenessHub />
-          </div>
-        </section>
+        <WasteAwarenessSection />
         <EcosystemSection />
       </main>
       <SiteFooter />
