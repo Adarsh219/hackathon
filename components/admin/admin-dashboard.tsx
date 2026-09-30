@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
+  Ban,
   CheckCircle2,
   ClipboardList,
   Clock,
@@ -19,6 +20,7 @@ import {
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -186,10 +188,52 @@ const STAT_TONE = {
   good: 'text-emerald-700 bg-emerald-50 border border-emerald-200/80',
 }
 
-export function StatCards() {
+export type StatCardsProps = {
+  tickets?: any[]
+}
+
+export function StatCards({ tickets = [] }: StatCardsProps) {
+  const totalGrievances = tickets.length
+  const pendingAction = tickets.filter((t) => t.status === 'Pending').length
+  const inProgress = tickets.filter((t) => t.status === 'In Progress' || t.status === 'Dispatched').length
+
+  const stats = [
+    {
+      label: 'Total Grievances',
+      value: String(totalGrievances),
+      note: '+12% from yesterday',
+      icon: ClipboardList,
+      tone: 'neutral' as const,
+      trend: 'up' as const,
+    },
+    {
+      label: 'Pending Action',
+      value: String(pendingAction),
+      note: pendingAction > 0 ? `${pendingAction} require attention` : 'All cleared',
+      icon: AlertTriangle,
+      tone: 'warn' as const,
+    },
+    {
+      label: 'In Progress',
+      value: String(inProgress),
+      note: 'Assigned to sanitation trucks',
+      icon: Truck,
+      tone: 'info' as const,
+    },
+    {
+      label: 'Avg. Resolution Time',
+      value: '4.2',
+      unit: 'Hours',
+      note: '-18% improved',
+      icon: Clock,
+      tone: 'good' as const,
+      trend: 'down' as const,
+    },
+  ]
+
   return (
     <section aria-label="Key metrics" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {STATS.map((s) => {
+      {stats.map((s) => {
         const Icon = s.icon
         const Trend = 'trend' in s ? (s.trend === 'up' ? TrendingUp : TrendingDown) : null
         return (
@@ -242,20 +286,22 @@ export function StatCards() {
 /* -------------------------------------------------------------------------
  * 3. Grievance Table
  * ----------------------------------------------------------------------- */
-const STATUS_STYLE: Record<AdminStatus, string> = {
+const STATUS_STYLE: Record<string, string> = {
   Pending: 'border-amber-200 bg-amber-50 text-amber-800',
   'In Progress': 'border-blue-200 bg-blue-50 text-blue-700',
   Dispatched: 'border-purple-200 bg-purple-50 text-purple-700',
   Resolved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  Rejected: 'border-rose-200 bg-rose-50 text-rose-700',
 }
 
 export type GrievanceTableProps = {
-  tickets: AdminTicket[]
+  tickets: any[]
   total: number
   onUpdate: (id: string, status: AdminStatus, crew?: string) => void
+  onReject?: (id: string) => void
 }
 
-export function GrievanceTable({ tickets, total, onUpdate }: GrievanceTableProps) {
+export function GrievanceTable({ tickets, total, onUpdate, onReject }: GrievanceTableProps) {
   return (
     <Card className="min-w-0 gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white py-0 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-slate-200 bg-white px-5 py-4">
@@ -295,15 +341,21 @@ export function GrievanceTable({ tickets, total, onUpdate }: GrievanceTableProps
               </TableRow>
             )}
             {tickets.map((t) => {
-              const { date, time } = formatReported(t.reportedAt)
+              const ticketId = t.ticket_id || t.id
+              const category = t.category || t.title || 'Civic Issue'
+              const ward = t.ward || 'Ward 4'
+              const status = t.status || 'Pending'
+              const location = t.location || t.description || 'Sector 4 Market'
+              const reportedRaw = t.created_at || t.reportedAt || new Date().toISOString()
+              const { date, time } = formatReported(reportedRaw)
               return (
-                <TableRow key={t.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/70">
-                  <TableCell className="pl-5 font-mono text-xs font-semibold text-slate-900">{t.id}</TableCell>
-                  <TableCell className="text-sm font-medium text-slate-800">{t.category}</TableCell>
+                <TableRow key={ticketId} className="border-b border-slate-100 transition-colors hover:bg-slate-50/70">
+                  <TableCell className="pl-5 font-mono text-xs font-semibold text-slate-900">{ticketId}</TableCell>
+                  <TableCell className="text-sm font-medium text-slate-800">{category}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="max-w-56 truncate text-sm font-medium text-slate-900">{t.location}</span>
-                      <span className="text-xs text-slate-500">{t.ward}</span>
+                      <span className="max-w-56 truncate text-sm font-medium text-slate-900">{location}</span>
+                      <span className="text-xs text-slate-500">{ward}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -318,76 +370,98 @@ export function GrievanceTable({ tickets, total, onUpdate }: GrievanceTableProps
                         variant="outline"
                         className={cn(
                           'rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-2xs',
-                          STATUS_STYLE[t.status],
+                          STATUS_STYLE[status] || 'border-slate-200 bg-slate-50 text-slate-700',
                         )}
                       >
-                        {t.status}
+                        {status}
                       </Badge>
-                      {t.crew && t.status !== 'Resolved' && (
+                      {t.crew && status !== 'Resolved' && status !== 'Rejected' && (
                         <span className="text-[11px] font-medium text-slate-500">{t.crew}</span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="pr-5 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Actions for ${t.id}`}
-                            className="size-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                          >
-                            <MoreHorizontal className="size-4" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-52 rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg"
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onReject?.(t.id || t.ticket_id)}
+                        className="h-7 text-xs border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 px-2 rounded-lg cursor-pointer"
+                        title="Reject ticket as spam"
                       >
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel className="font-mono text-xs font-semibold text-slate-500">
-                            {t.id}
-                          </DropdownMenuLabel>
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator className="bg-slate-100" />
-                        <DropdownMenuItem
-                          disabled={t.status === 'In Progress'}
-                          onClick={() => onUpdate(t.id, 'In Progress')}
-                          className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                        <Ban className="size-3 mr-1 text-rose-600" />
+                        Reject
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Actions for ${ticketId}`}
+                              className="size-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-52 rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg"
                         >
-                          <Loader className="size-4 text-slate-500" aria-hidden="true" />
-                          Mark as In Progress
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={t.status === 'Resolved'}
-                          onClick={() => onUpdate(t.id, 'Resolved')}
-                          className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                        >
-                          <CheckCircle2 className="size-4 text-emerald-600" aria-hidden="true" />
-                          Mark as Resolved
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-slate-100" />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="text-slate-700 hover:bg-slate-50 hover:text-slate-900">
-                            <Send className="size-4 text-slate-500" aria-hidden="true" />
-                            Dispatch Team
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg">
-                            {CREWS.map((c) => (
-                              <DropdownMenuItem
-                                key={c.id}
-                                onClick={() => onUpdate(t.id, 'Dispatched', c.name)}
-                                className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                              >
-                                {c.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel className="font-mono text-xs font-semibold text-slate-500">
+                              {ticketId}
+                            </DropdownMenuLabel>
+                          </DropdownMenuGroup>
+                          <DropdownMenuSeparator className="bg-slate-100" />
+                          <DropdownMenuItem
+                            disabled={status === 'In Progress'}
+                            onClick={() => onUpdate(t.id || t.ticket_id, 'In Progress')}
+                            className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                          >
+                            <Loader className="size-4 text-slate-500" aria-hidden="true" />
+                            Mark as In Progress
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={status === 'Resolved'}
+                            onClick={() => onUpdate(t.id || t.ticket_id, 'Resolved')}
+                            className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                          >
+                            <CheckCircle2 className="size-4 text-emerald-600" aria-hidden="true" />
+                            Mark as Resolved
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-slate-100" />
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+                              <Send className="size-4 text-slate-500" aria-hidden="true" />
+                              Dispatch Team
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg">
+                              {CREWS.map((c) => (
+                                <DropdownMenuItem
+                                  key={c.id}
+                                  onClick={() => onUpdate(t.id || t.ticket_id, 'Dispatched', c.name)}
+                                  className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                                >
+                                  {c.name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator className="bg-slate-100" />
+                          <DropdownMenuItem
+                            onClick={() => onReject?.(t.id || t.ticket_id)}
+                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                          >
+                            <Ban className="size-4 text-rose-600" aria-hidden="true" />
+                            Reject / Spam
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               )
@@ -567,21 +641,45 @@ export function QuickDispatchCard() {
  * 6. Main Admin Dashboard Component
  * ----------------------------------------------------------------------- */
 export function AdminDashboard() {
-  const [tickets, setTickets] = useState<AdminTicket[]>(INITIAL_TICKETS)
+  const [tickets, setTickets] = useState<any[]>([])
   const [query, setQuery] = useState('')
   const [ward, setWard] = useState('all')
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      const { data, error } = await supabase
+        .from('issues')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (data) setTickets(data)
+    }
+    fetchTickets()
+  }, [])
+
+  const handleReject = async (id: string) => {
+    await supabase.from('issues').update({ status: 'Rejected' }).eq('id', id)
+    setTickets((prev) => prev.filter((ticket) => ticket.id !== id && ticket.ticket_id !== id))
+    toast.success(`Ticket #${id} rejected and removed`)
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return tickets.filter((t) => {
-      if (ward !== 'all' && t.ward !== ward) return false
+      const ticketWard = t.ward || 'Ward 4'
+      if (ward !== 'all' && ticketWard !== ward) return false
       if (!q) return true
-      return [t.id, t.category, t.location, t.ward].some((v) => v.toLowerCase().includes(q))
+      const ticketId = t.ticket_id || t.id || ''
+      const category = t.category || t.title || ''
+      const location = t.location || t.description || ''
+      return [ticketId, category, location, ticketWard].some((v) => v.toLowerCase().includes(q))
     })
   }, [tickets, query, ward])
 
-  function updateStatus(id: string, status: AdminStatus, crew?: string) {
-    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status, crew: crew ?? t.crew } : t)))
+  async function updateStatus(id: string, status: AdminStatus, crew?: string) {
+    await supabase.from('issues').update({ status, ...(crew ? { crew } : {}) }).eq('id', id)
+    setTickets((prev) =>
+      prev.map((t) => (t.id === id || t.ticket_id === id ? { ...t, status, crew: crew ?? t.crew } : t))
+    )
     toast.success(`${id} updated`, { description: crew ? `${status} · ${crew}` : `Status set to ${status}` })
   }
 
@@ -589,9 +687,14 @@ export function AdminDashboard() {
     <div className="min-h-dvh bg-slate-50 text-slate-900 antialiased">
       <AdminHeader query={query} onQueryChange={setQuery} ward={ward} onWardChange={setWard} />
       <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
-        <StatCards />
+        <StatCards tickets={tickets} />
         <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-          <GrievanceTable tickets={filtered} total={tickets.length} onUpdate={updateStatus} />
+          <GrievanceTable
+            tickets={filtered}
+            total={tickets.length}
+            onUpdate={updateStatus}
+            onReject={handleReject}
+          />
           <div className="flex flex-col gap-6">
             <HotspotsCard />
             <QuickDispatchCard />
