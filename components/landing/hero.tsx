@@ -61,9 +61,9 @@ const statusStyles: Record<string, string> = {
 
 function PlatformPreview() {
   return (
-    <div className="flex flex-col items-center justify-center relative w-full max-w-lg mx-auto" aria-hidden="true">
-      {/* Citizen Portal Preview Card (Floating Overlay) */}
-      <div className="w-[92%] -mb-4 z-10 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur p-4 shadow-lg shadow-slate-200/50 transition-transform">
+    <div className="flex flex-col gap-4 w-full max-w-md mx-auto items-stretch" aria-hidden="true">
+      {/* Citizen Portal Preview Card */}
+      <div className="w-full rounded-2xl border border-slate-200 bg-white/90 backdrop-blur shadow-sm p-4">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
             <Users className="size-3.5" />
@@ -89,7 +89,7 @@ function PlatformPreview() {
       </div>
 
       {/* Admin Operations Card */}
-      <div className="w-full rounded-2xl border border-slate-200 bg-white/80 backdrop-blur p-5 sm:p-6 shadow-sm">
+      <div className="w-full rounded-2xl border border-slate-200 bg-white/90 backdrop-blur shadow-sm p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -108,7 +108,7 @@ function PlatformPreview() {
           {queue.map((t) => (
             <li
               key={t.id}
-              className={`flex items-center gap-3 px-3.5 py-2.5 text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
                 t.status === 'New' ? 'bg-emerald-50/40' : 'hover:bg-slate-50/60'
               }`}
             >
