@@ -74,10 +74,17 @@ class SupabaseAuthClient {
           }
         }
 
+        const sessionData = payload.session || payload
+        if (typeof window !== 'undefined' && sessionData) {
+          try {
+            localStorage.setItem('cleansync_session', JSON.stringify(sessionData))
+          } catch {}
+        }
+
         return {
           data: {
             user: payload.user,
-            session: payload,
+            session: sessionData,
           },
           error: null,
         }
@@ -92,7 +99,7 @@ class SupabaseAuthClient {
     }
 
     // Fallback simulation when Supabase credentials are not initialized
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    await new Promise((resolve) => setTimeout(resolve, 300))
 
     const mockUser: SupabaseAuthUser = {
       id: `usr_${Math.random().toString(36).substring(2, 10)}`,
@@ -100,14 +107,22 @@ class SupabaseAuthClient {
       user_metadata: { email: trimmedEmail },
     }
 
+    const mockSession: SupabaseAuthSession = {
+      access_token: `mock_jwt_${Date.now()}`,
+      token_type: 'bearer',
+      user: mockUser,
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('cleansync_session', JSON.stringify(mockSession))
+      } catch {}
+    }
+
     return {
       data: {
         user: mockUser,
-        session: {
-          access_token: `mock_jwt_${Date.now()}`,
-          token_type: 'bearer',
-          user: mockUser,
-        },
+        session: mockSession,
       },
       error: null,
     }
@@ -162,10 +177,17 @@ class SupabaseAuthClient {
           }
         }
 
+        const sessionData = payload.session || null
+        if (typeof window !== 'undefined' && sessionData) {
+          try {
+            localStorage.setItem('cleansync_session', JSON.stringify(sessionData))
+          } catch {}
+        }
+
         return {
           data: {
             user: payload.user,
-            session: payload.session || null,
+            session: sessionData,
           },
           error: null,
         }
@@ -180,7 +202,7 @@ class SupabaseAuthClient {
     }
 
     // Fallback simulation
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    await new Promise((resolve) => setTimeout(resolve, 300))
 
     const mockUser: SupabaseAuthUser = {
       id: `usr_${Math.random().toString(36).substring(2, 10)}`,
@@ -188,20 +210,55 @@ class SupabaseAuthClient {
       user_metadata: options?.data || {},
     }
 
+    const mockSession: SupabaseAuthSession = {
+      access_token: `mock_jwt_${Date.now()}`,
+      token_type: 'bearer',
+      user: mockUser,
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('cleansync_session', JSON.stringify(mockSession))
+      } catch {}
+    }
+
     return {
       data: {
         user: mockUser,
-        session: {
-          access_token: `mock_jwt_${Date.now()}`,
-          token_type: 'bearer',
-          user: mockUser,
-        },
+        session: mockSession,
       },
       error: null,
     }
   }
 
+  async getSession(): Promise<{ data: { session: SupabaseAuthSession | null }; error: null }> {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('cleansync_session') || localStorage.getItem('supabase_session')
+        if (stored) {
+          return { data: { session: JSON.parse(stored) }, error: null }
+        }
+      } catch {}
+    }
+    return { data: { session: null }, error: null }
+  }
+
+  async getUser(): Promise<{ data: { user: SupabaseAuthUser | null }; error: null }> {
+    const { data } = await this.getSession()
+    return { data: { user: data.session?.user || null }, error: null }
+  }
+
   async signOut(): Promise<{ error: null }> {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('cleansync_session')
+        localStorage.removeItem('cleansync_admin_auth')
+        localStorage.removeItem('cleansync_user_role')
+        localStorage.removeItem('supabase_session')
+        document.cookie = 'cleansync_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+        document.cookie = 'cleansync_admin=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+      } catch {}
+    }
     return { error: null }
   }
 }

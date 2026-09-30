@@ -22,7 +22,8 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [role, setRole] = useState<Role>('citizen')
+  const roleParam = searchParams.get('role')
+  const [role, setRole] = useState<Role>(roleParam === 'admin' ? 'admin' : 'citizen')
   const [mode, setMode] = useState<Mode>('signin')
 
   // Form inputs
@@ -44,10 +45,10 @@ function LoginForm() {
 
   // Support pre-selection via URL query parameter ?role=admin or default to citizen
   useEffect(() => {
-    const roleParam = searchParams.get('role')
-    if (roleParam === 'admin') {
+    const p = searchParams.get('role')
+    if (p === 'admin') {
       setRole('admin')
-    } else if (roleParam === 'citizen') {
+    } else if (p === 'citizen') {
       setRole('citizen')
     }
   }, [searchParams])
@@ -56,6 +57,7 @@ function LoginForm() {
     setRole(newRole)
     setError(null)
     setSuccessMessage(null)
+    router.replace(`/login?role=${newRole}`)
   }
 
   const handleAutofillDemo = () => {
@@ -78,6 +80,23 @@ function LoginForm() {
         password.trim() === 'admin123'
 
       if (isDemoAdmin) {
+        if (typeof window !== 'undefined') {
+          const adminSession = {
+            access_token: `demo_admin_jwt_${Date.now()}`,
+            token_type: 'bearer',
+            user: {
+              id: 'usr_admin_demo',
+              email: 'admin@cleansync.city',
+              role: 'admin',
+              user_metadata: { role: 'admin', full_name: 'System Administrator' },
+            },
+          }
+          localStorage.setItem('cleansync_session', JSON.stringify(adminSession))
+          localStorage.setItem('cleansync_admin_auth', 'true')
+          localStorage.setItem('cleansync_user_role', 'admin')
+          document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
+          document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
+        }
         await new Promise((r) => setTimeout(r, 400))
         router.push('/admin')
         return
@@ -91,7 +110,7 @@ function LoginForm() {
           return
         }
 
-        const { error: authError } = await supabase.auth.signInWithPassword({
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: identifier.trim(),
           password: password.trim(),
         })
@@ -102,11 +121,34 @@ function LoginForm() {
           return
         }
 
+        if (typeof window !== 'undefined') {
+          const sessionToStore = authData?.session || {
+            access_token: `jwt_${Date.now()}`,
+            token_type: 'bearer',
+            user: authData?.user || {
+              id: `usr_${Date.now()}`,
+              email: identifier.trim(),
+              role,
+            },
+          }
+          localStorage.setItem('cleansync_session', JSON.stringify(sessionToStore))
+          localStorage.setItem('cleansync_user_role', role)
+          document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
+
+          if (role === 'admin') {
+            localStorage.setItem('cleansync_admin_auth', 'true')
+            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
+          } else {
+            localStorage.removeItem('cleansync_admin_auth')
+            document.cookie = 'cleansync_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+          }
+        }
+
         // On success: route appropriately
         if (role === 'admin') {
           router.push('/admin')
         } else {
-          router.push('/citizen')
+          router.push('/report')
         }
       } else {
         // Sign-up mode
@@ -134,7 +176,7 @@ function LoginForm() {
           return
         }
 
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: identifier.trim(),
           password: password.trim(),
           options: {
@@ -152,13 +194,37 @@ function LoginForm() {
           return
         }
 
+        if (typeof window !== 'undefined') {
+          const sessionToStore = signUpData?.session || {
+            access_token: `jwt_${Date.now()}`,
+            token_type: 'bearer',
+            user: signUpData?.user || {
+              id: `usr_${Date.now()}`,
+              email: identifier.trim(),
+              role,
+              user_metadata: { full_name: fullName.trim(), sector, role },
+            },
+          }
+          localStorage.setItem('cleansync_session', JSON.stringify(sessionToStore))
+          localStorage.setItem('cleansync_user_role', role)
+          document.cookie = 'cleansync_session=true; path=/; max-age=86400;'
+
+          if (role === 'admin') {
+            localStorage.setItem('cleansync_admin_auth', 'true')
+            document.cookie = 'cleansync_admin=true; path=/; max-age=86400;'
+          } else {
+            localStorage.removeItem('cleansync_admin_auth')
+            document.cookie = 'cleansync_admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+          }
+        }
+
         setSuccessMessage('Account created successfully! Redirecting…')
         await new Promise((r) => setTimeout(r, 600))
 
         if (role === 'admin') {
           router.push('/admin')
         } else {
-          router.push('/citizen')
+          router.push('/report')
         }
       }
     } catch (err: any) {

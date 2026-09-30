@@ -9,7 +9,7 @@ export function Hero() {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/citizen"
+              href="/login?role=citizen"
               className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
             >
               <Users className="size-3.5" aria-hidden="true" />
@@ -19,7 +19,7 @@ export function Hero() {
               +
             </span>
             <Link
-              href="/admin"
+              href="/login?role=admin"
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card/80"
             >
               <Building2 className="size-3.5" aria-hidden="true" />
@@ -38,12 +38,12 @@ export function Hero() {
             dispatches the right crew.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/citizen" size="lg">
+            <ButtonLink href="/login?role=citizen" size="lg">
               Report an Issue
               <ArrowRight className="size-4" aria-hidden="true" />
             </ButtonLink>
             <ButtonLink href="/login?role=admin" size="lg" variant="outline">
-              Admin Login
+              Enter Command Center
             </ButtonLink>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">

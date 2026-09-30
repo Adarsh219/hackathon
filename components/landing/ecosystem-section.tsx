@@ -30,7 +30,7 @@ export function EcosystemSection() {
             ))}
           </ul>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <ButtonLink href="/citizen" variant="outline">
+            <ButtonLink href="/login?role=citizen" variant="outline">
               Open Citizen Portal
               <ArrowRight className="size-4" aria-hidden="true" />
             </ButtonLink>
@@ -70,7 +70,7 @@ export function EcosystemSection() {
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
             <Link
-              href="/admin"
+              href="/login?role=admin"
               className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground hover:underline"
             >
               Command Center →

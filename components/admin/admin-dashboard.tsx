@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   Ban,
@@ -10,6 +11,8 @@ import {
   Clock,
   Flame,
   Loader,
+  Loader2,
+  LogOut,
   MoreHorizontal,
   Recycle,
   Search,
@@ -62,9 +65,10 @@ export type AdminHeaderProps = {
   onQueryChange: (v: string) => void
   ward: string
   onWardChange: (v: string) => void
+  onSignOut?: () => void
 }
 
-export function AdminHeader({ query, onQueryChange, ward, onWardChange }: AdminHeaderProps) {
+export function AdminHeader({ query, onQueryChange, ward, onWardChange, onSignOut }: AdminHeaderProps) {
   const [live, setLive] = useState(true)
 
   return (
@@ -145,11 +149,23 @@ export function AdminHeader({ query, onQueryChange, ward, onWardChange }: AdminH
           </div>
 
           <Link
-            href="/citizen"
+            href="/report"
             className="hidden text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 sm:inline"
           >
             Citizen Portal
           </Link>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onSignOut}
+            className="h-9 gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 shadow-xs cursor-pointer"
+            title="Sign out of Admin Operations"
+          >
+            <LogOut className="size-3.5" />
+            <span className="hidden sm:inline">Sign Out</span>
+          </Button>
         </div>
       </div>
     </header>
@@ -641,11 +657,44 @@ export function QuickDispatchCard() {
  * 6. Main Admin Dashboard Component
  * ----------------------------------------------------------------------- */
 export function AdminDashboard() {
+  const router = useRouter()
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean | null>(null)
   const [tickets, setTickets] = useState<any[]>([])
   const [query, setQuery] = useState('')
   const [ward, setWard] = useState('all')
 
   useEffect(() => {
+    let isMounted = true
+
+    const checkAdminAuth = async () => {
+      const { data } = await supabase.auth.getSession()
+      const adminAuthFlag = typeof window !== 'undefined' ? localStorage.getItem('cleansync_admin_auth') : null
+      const userRole = typeof window !== 'undefined' ? localStorage.getItem('cleansync_user_role') : null
+      const sessionRole = data?.session?.user?.role || (data?.session?.user?.user_metadata as any)?.role
+
+      const hasAdminAuth =
+        adminAuthFlag === 'true' ||
+        userRole === 'admin' ||
+        sessionRole === 'admin'
+
+      if (!hasAdminAuth) {
+        if (isMounted) setIsAdminAuthenticated(false)
+        router.replace('/login?role=admin')
+      } else {
+        if (isMounted) setIsAdminAuthenticated(true)
+      }
+    }
+
+    checkAdminAuth()
+
+    return () => {
+      isMounted = false
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (!isAdminAuthenticated) return
+
     const fetchTickets = async () => {
       const { data, error } = await supabase
         .from('issues')
@@ -654,7 +703,12 @@ export function AdminDashboard() {
       if (data) setTickets(data)
     }
     fetchTickets()
-  }, [])
+  }, [isAdminAuthenticated])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.replace('/login?role=admin')
+  }
 
   const handleReject = async (id: string) => {
     await supabase.from('issues').update({ status: 'Rejected' }).eq('id', id)
@@ -683,9 +737,24 @@ export function AdminDashboard() {
     toast.success(`${id} updated`, { description: crew ? `${status} · ${crew}` : `Status set to ${status}` })
   }
 
+  if (isAdminAuthenticated === null || !isAdminAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center gap-3">
+        <Loader2 className="size-8 text-emerald-600 animate-spin" />
+        <p className="text-sm font-medium text-slate-500">Verifying admin credentials…</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900 antialiased">
-      <AdminHeader query={query} onQueryChange={setQuery} ward={ward} onWardChange={setWard} />
+      <AdminHeader
+        query={query}
+        onQueryChange={setQuery}
+        ward={ward}
+        onWardChange={setWard}
+        onSignOut={handleSignOut}
+      />
       <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
         <StatCards tickets={tickets} />
         <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">

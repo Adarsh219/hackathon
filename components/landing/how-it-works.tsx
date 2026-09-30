@@ -41,14 +41,14 @@ export function HowItWorks() {
 
       <div className="mt-14 hidden grid-cols-2 gap-6 md:grid">
         <Link
-          href="/citizen"
+          href="/login?role=citizen"
           className="flex items-center justify-center gap-2 rounded-full border border-primary/30 bg-secondary py-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
         >
           <Users className="size-3.5" />
           Citizen Portal
         </Link>
         <Link
-          href="/admin"
+          href="/login?role=admin"
           className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2 text-xs font-medium text-foreground transition-colors hover:bg-card/80"
         >
           <Building2 className="size-3.5" />

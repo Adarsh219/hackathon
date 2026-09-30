@@ -33,10 +33,10 @@ export function SiteHeader() {
           >
             Log in
           </Link>
-          <ButtonLink href="/citizen" variant="outline" className="hidden sm:inline-flex">
+          <ButtonLink href="/login?role=citizen" variant="outline" className="hidden sm:inline-flex">
             Citizen Portal
           </ButtonLink>
-          <ButtonLink href="/login?role=admin">Admin Login</ButtonLink>
+          <ButtonLink href="/login?role=admin">Admin</ButtonLink>
         </div>
       </div>
     </header>
