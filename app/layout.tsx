@@ -7,9 +7,9 @@ import './globals.css'
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 
 export const metadata: Metadata = {
-  title: 'CleanSync Citizen Portal',
+  title: 'CleanSync — Citizen Reporting & Municipal Dispatch Platform',
   description:
-    'Report waste issues, track complaints, schedule bulk pickups, and learn proper waste segregation with CleanSync.',
+    'CleanSync connects frictionless, GPS-verified citizen waste reporting with an enterprise command center for municipal authorities: live metrics, automated hotspot mapping, and quick crew dispatch.',
   generator: 'v0.app',
   icons: {
     icon: [

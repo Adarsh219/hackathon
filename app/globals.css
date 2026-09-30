@@ -19,6 +19,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-warning: var(--warning);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -63,6 +64,7 @@
   --accent: oklch(0.979 0.021 166.113);
   --accent-foreground: oklch(0.432 0.095 166.913);
   --destructive: oklch(0.577 0.245 27.325);
+  --warning: oklch(0.76 0.15 75);
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
   --ring: oklch(0.696 0.17 162.48);
@@ -100,6 +102,7 @@
   --accent: oklch(0.27 0.03 262);
   --accent-foreground: oklch(0.968 0.007 247.896);
   --destructive: oklch(0.704 0.191 22.216);
+  --warning: oklch(0.76 0.15 75);
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 13%);
   --ring: oklch(0.696 0.17 162.48);
@@ -122,6 +125,7 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --warning: oklch(0.76 0.15 75);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -158,6 +162,7 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.704 0.191 22.216);
+    --warning: oklch(0.76 0.15 75);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
@@ -181,7 +186,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-2xl border border-border/80 bg-card backdrop-blur-md;
   }
 }

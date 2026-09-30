@@ -143,7 +143,7 @@ export function AdminHeader({ query, onQueryChange, ward, onWardChange }: AdminH
           </div>
 
           <Link
-            href="/"
+            href="/citizen"
             className="hidden text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 sm:inline"
           >
             Citizen Portal

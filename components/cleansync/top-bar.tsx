@@ -7,15 +7,17 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-40 border-b bg-card/90 backdrop-blur supports-backdrop-filter:bg-card/75">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4 sm:px-6">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Recycle className="size-5" aria-hidden="true" />
-        </div>
-        <div className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm font-semibold sm:text-base">
-            CleanSync <span className="hidden font-normal text-muted-foreground sm:inline">Citizen Portal</span>
-          </span>
-          <span className="text-xs text-muted-foreground sm:hidden">Citizen Portal</span>
-        </div>
+        <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Recycle className="size-5" aria-hidden="true" />
+          </div>
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-semibold sm:text-base">
+              CleanSync <span className="hidden font-normal text-muted-foreground sm:inline">Citizen Portal</span>
+            </span>
+            <span className="text-xs text-muted-foreground sm:hidden">Citizen Portal</span>
+          </div>
+        </Link>
         <div className="ml-auto flex items-center gap-3">
           <Link
             href="/admin"
