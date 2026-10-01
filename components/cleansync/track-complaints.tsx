@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { CalendarDays, ChevronDown, MapPin } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CalendarDays, ChevronDown, MapPin, Truck } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -23,6 +23,12 @@ type TrackComplaintsProps = {
 
 export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) {
   const [openId, setOpenId] = useState<string | null>(highlightId ?? tickets[0]?.id ?? null)
+
+  useEffect(() => {
+    if (highlightId) {
+      setOpenId(highlightId)
+    }
+  }, [highlightId])
 
   const counts = tickets.reduce(
     (acc, t) => {
@@ -67,9 +73,16 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold">#{ticket.id}</span>
-                      <Badge variant="secondary" className="rounded-md">
-                        {categoryLabel(ticket.category)}
-                      </Badge>
+                      {ticket.category === 'Pickup Request' || ticket.category?.toLowerCase() === 'pickup request' ? (
+                        <Badge className="rounded-md border border-emerald-300 bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-0.5 shadow-2xs">
+                          <Truck className="size-3 mr-1 inline-block shrink-0" aria-hidden="true" />
+                          Scheduled Pickup
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="rounded-md">
+                          {categoryLabel(ticket.category)}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={cn('rounded-full', status.className)}>

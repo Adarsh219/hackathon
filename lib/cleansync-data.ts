@@ -5,7 +5,7 @@ export const ISSUE_CATEGORIES = [
   { value: 'illegal-dumping', label: 'Illegal Dumping' },
 ] as const
 
-export type IssueCategory = (typeof ISSUE_CATEGORIES)[number]['value']
+export type IssueCategory = (typeof ISSUE_CATEGORIES)[number]['value'] | 'Pickup Request' | string
 
 export const PRIORITIES = ['low', 'medium', 'urgent'] as const
 export type Priority = (typeof PRIORITIES)[number]
@@ -41,7 +41,8 @@ export function statusFromStep(stepIndex: number): TicketStatus {
   return 'pending'
 }
 
-export function categoryLabel(value: IssueCategory) {
+export function categoryLabel(value: IssueCategory | string) {
+  if (value === 'Pickup Request' || value?.toLowerCase() === 'pickup request') return 'Scheduled Pickup'
   return ISSUE_CATEGORIES.find((c) => c.value === value)?.label ?? value
 }
 

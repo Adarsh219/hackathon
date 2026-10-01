@@ -55,7 +55,11 @@ export function CitizenPortal() {
         <TrackComplaints tickets={tickets} highlightId={highlightId} />
       </TabsContent>
       <TabsContent value="pickup">
-        <SchedulePickup />
+        <SchedulePickup
+          onCreated={handleTicketCreated}
+          onViewTracker={() => setTab('track')}
+          nextNumber={105 + tickets.length - INITIAL_TICKETS.length}
+        />
       </TabsContent>
       <TabsContent value="awareness">
         <AwarenessHub />

@@ -389,8 +389,10 @@ export class SupabaseQueryBuilder<T = any> implements PromiseLike<{ data: T | nu
             longitude: rec.longitude || 80.9462,
             priority: rec.priority || 'Medium',
             image_url: rec.image_url || null,
+            user_email: rec.user_email || 'citizen@spectrum.local',
             created_at: rec.created_at || new Date().toISOString(),
             reportedAt: rec.created_at || new Date().toISOString(),
+            ...rec,
           }
         })
         inMemoryIssuesStore.unshift(...newItems)
