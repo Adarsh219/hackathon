@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import {
   CheckCircle2,
   ExternalLink,
-  ImageIcon,
   Loader,
   MapPin,
   Send,
@@ -108,20 +107,27 @@ export function TicketDetailModal({
 
   if (!isOpen || !localTicket) return null
 
-  const ticketId = localTicket.ticket_id || localTicket.id || 'N/A'
-  const category = localTicket.category || localTicket.title || 'Civic Issue'
-  const ward = localTicket.ward || 'Ward 4'
-  const status = localTicket.status || 'Pending'
-  const priority = localTicket.priority || 'Medium'
+  const issue = localTicket
+  const ticketId = issue.ticket_id || issue.id || 'N/A'
+  const category = issue.category || issue.title || 'Civic Issue'
+  const ward = issue.ward || 'Ward 4'
+  const status = issue.status || 'Pending'
+  const priority = issue.priority || 'Medium'
   const priorityBadge = getPriorityBadge(priority)
-  const description = localTicket.description || localTicket.location || 'No description provided.'
-  const latitude = localTicket.latitude ?? 26.8467
-  const longitude = localTicket.longitude ?? 80.9462
-  const reportedRaw = localTicket.created_at || localTicket.reportedAt || new Date().toISOString()
+  const description = issue.description || issue.location || 'No description provided.'
+  const latitude = issue.latitude ?? 26.8467
+  const longitude = issue.longitude ?? 80.9462
+  const reportedRaw = issue.created_at || issue.reportedAt || new Date().toISOString()
   const { date, time } = formatReported(reportedRaw)
 
+  const isValidImageUrl =
+    typeof issue?.image_url === 'string' &&
+    (issue.image_url.startsWith('http') ||
+      issue.image_url.startsWith('data:image/') ||
+      issue.image_url.startsWith('/'))
+
   const handleStatusChange = async (newStatus: AdminStatus, crew?: string) => {
-    await onUpdateStatus(localTicket.id || localTicket.ticket_id, newStatus, crew)
+    await onUpdateStatus(issue.id || issue.ticket_id, newStatus, crew)
     setLocalTicket((prev: any) => ({
       ...prev,
       status: newStatus,
@@ -191,21 +197,26 @@ export function TicketDetailModal({
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Incident Photo
           </span>
-          {localTicket.image_url ? (
-            <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-2xs">
-              <img
-                src={localTicket.image_url}
-                alt={category}
-                className="w-full max-h-72 object-cover"
+          {isValidImageUrl ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 max-h-60 w-full flex items-center justify-center">
+              <img 
+                src={issue.image_url} 
+                alt={issue.title || "Incident Photo"} 
+                className="w-full h-56 object-cover"
+                onError={(e) => {
+                  // Fallback if the URL fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
               />
+              <div className="hidden py-8 text-center text-xs text-slate-400">Image preview unavailable</div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                <ImageIcon className="size-5" aria-hidden="true" />
-              </div>
-              <span className="text-sm font-medium text-slate-600">No image attached</span>
-              <span className="text-xs text-slate-400">The citizen did not upload photo evidence with this complaint.</span>
+            <div className="flex h-32 w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400 text-xs">
+              <svg className="h-6 w-6 mb-1 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              No photo attached with this grievance
             </div>
           )}
         </div>
