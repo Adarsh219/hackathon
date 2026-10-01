@@ -44,34 +44,55 @@ Municipal waste management and urban sanitation departments worldwide suffer fro
 CleanSync follows a decoupled, resilient architecture organized across four foundational pillars:
 
 ```mermaid
-flowchart TD
-    subgraph Pillar1["1. Citizen Telemetry & Reporting (/report, /citizen)"]
-        A1["Citizen Field Client"] --> A2["HTML5 Geolocation<br/>GPS Handshake"]
-        A1 --> A3["Rear Camera Capture<br/>capture='environment'"]
-        A1 --> A4["Doorstep Bulk Booking<br/>Furniture / E-Waste"]
+graph TD
+    subgraph S1 ["1. Citizen Telemetry and Intake"]
+        A1["Citizen Field App"]
+        A2["HTML5 Geolocation GPS Handshake"]
+        A3["Mobile Camera Capture"]
+        A4["Doorstep Bulk Booking Form"]
+        A1 --> A2
+        A1 --> A3
+        A1 --> A4
     end
 
-    subgraph Pillar2["2. Verification & Anti-Fraud Engine"]
-        A3 --> B1["Binary APP1 Parser<br/>0xFFE1 & TIFF IFD"]
-        B1 -->|Camera Signature Matched| B2["[VERIFIED: Hardware Live Capture]"]
-        B1 -->|Scrubbed / Missing EXIF| B3["[FLAGGED: Missing Camera EXIF]"]
-        B2 & B3 --> B4["Sanitization Layer<br/>Strip Audit Tags from Citizen UI"]
+    subgraph S2 ["2. Verification and Anti-Fraud Engine"]
+        B1["Binary APP1 Parser and EXIF Inspection"]
+        B2["Status: VERIFIED Live Hardware Capture"]
+        B3["Status: FLAGGED Missing Camera EXIF"]
+        B4["Sanitization Layer: Strip UI Audit Tags"]
+        A3 --> B1
+        B1 -->|Camera Signature Confirmed| B2
+        B1 -->|Scrubbed or Web Image| B3
+        B2 --> B4
+        B3 --> B4
     end
 
-    subgraph Pillar3["3. Unified PostgreSQL Data Layer"]
-        A4 & B4 --> C1[("Supabase / PostgreSQL<br/>public.issues")]
-        IOT["IoT Smart-Bin Sensors<br/>Ultrasonic Fill Sensors"] -.->|Automated REST Webhooks| C1
+    subgraph S3 ["3. Unified PostgreSQL Data Layer"]
+        C1[("Supabase PostgreSQL Database")]
+        IOT["IoT Smart-Bin Fill Sensors"]
+        A4 --> C1
+        B4 --> C1
+        IOT -.->|Automated REST Webhooks| C1
     end
 
-    subgraph Pillar4["4. Admin Command Center (/admin)"]
-        C1 -->|Lightweight Projection<br/>excludes Base64| D1["Incoming Queue Table<br/>Sub-20KB Initial Load"]
-        D1 -->|1-Click 'View Details'| D2["On-Demand Hydration<br/>Full Base64 Image Fetch"]
-        D2 --> D3{"Audit State Check"}
-        D3 -->|Contains [VERIFIED]| D4["✓ Green Verification Pill<br/>Hardware Geotag Confirmed"]
-        D3 -->|Contains [FLAGGED]| D5["⚠️ Amber Warning Pill<br/>Missing Hardware EXIF"]
-        D1 --> D6["7-Day Predictive Hotspots<br/>Ward Density Analysis"]
-        D1 --> D7["1-Click Crew Routing<br/>Trucks D-07, R-12, Fleet Bravo"]
-        D1 --> D8["Spam Mitigation<br/>Direct 'Reject' Mutation"]
+    subgraph S4 ["4. Admin Operations Command Center"]
+        D1["Incoming Triage Queue Table"]
+        D2["On-Demand Single Ticket Hydration"]
+        D3{"Audit Check"}
+        D4["Green Badge: Live Camera Verified"]
+        D5["Amber Badge: Missing Hardware Warning"]
+        D6["7-Day Predictive Hotspots Analysis"]
+        D7["1-Click Crew Dispatch Routing"]
+        D8["Spam Mitigation and Rejection"]
+
+        C1 -->|Lightweight Payload Projection| D1
+        D1 -->|View Details Click| D2
+        D2 --> D3
+        D3 -->|Verified Tag Present| D4
+        D3 -->|Flagged or Missing Tag| D5
+        D1 --> D6
+        D1 --> D7
+        D1 --> D8
     end
 ```
 
