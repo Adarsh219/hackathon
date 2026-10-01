@@ -5,6 +5,38 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
+export { AdminDashboard } from '@/components/admin/admin-dashboard'
+export { TicketDetailModal } from '@/components/admin/ticket-detail-modal'
+
+// Admin issues data fetch query
+export async function fetchAdminIssues() {
+  return await supabase
+    .from('issues')
+    .select('*')
+    .order('created_at', { ascending: false })
+}
+
+// Status change and dispatch click handlers
+export async function handleStatusUpdate(
+  selectedIssue: { id: string },
+  status: 'In Progress' | 'Resolved',
+  setTickets?: React.Dispatch<React.SetStateAction<any[]>>
+) {
+  if (status === 'In Progress') {
+    const res = await supabase.from('issues').update({ status: 'In Progress' }).eq('id', selectedIssue.id)
+    if (setTickets) {
+      setTickets((prev) => prev.map((t) => (t.id === selectedIssue.id ? { ...t, status: 'In Progress' } : t)))
+    }
+    return res
+  }
+  if (status === 'Resolved') {
+    const res = await supabase.from('issues').update({ status: 'Resolved' }).eq('id', selectedIssue.id)
+    if (setTickets) {
+      setTickets((prev) => prev.map((t) => (t.id === selectedIssue.id ? { ...t, status: 'Resolved' } : t)))
+    }
+    return res
+  }
+}
 
 export default function AdminPage() {
   const router = useRouter()

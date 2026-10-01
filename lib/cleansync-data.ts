@@ -26,18 +26,29 @@ export type TimelineEvent = {
 
 export type Ticket = {
   id: string
+  ticket_id?: string
   category: IssueCategory
   location: string
   description: string
   priority: Priority
   createdAt: string
+  created_at?: string
+  status?: string
   stepIndex: number
   events: (TimelineEvent | null)[]
 }
 
-export function statusFromStep(stepIndex: number): TicketStatus {
-  if (stepIndex >= 3) return 'resolved'
-  if (stepIndex >= 1) return 'in-progress'
+export function statusFromStep(stepIndex?: number | string | null): TicketStatus {
+  if (typeof stepIndex === 'string') {
+    const s = stepIndex.toLowerCase()
+    if (s === 'resolved') return 'resolved'
+    if (s === 'in progress' || s === 'dispatched') return 'in-progress'
+    return 'pending'
+  }
+  if (typeof stepIndex === 'number') {
+    if (stepIndex >= 3) return 'resolved'
+    if (stepIndex >= 1) return 'in-progress'
+  }
   return 'pending'
 }
 

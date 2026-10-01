@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BookOpen, ClipboardList, Megaphone, Truck } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { INITIAL_TICKETS, type Ticket } from '@/lib/cleansync-data'
+import { type Ticket } from '@/lib/cleansync-data'
+import { supabase } from '@/lib/supabase'
 import { ReportIssueForm } from './report-issue-form'
 import { TrackComplaints } from './track-complaints'
 import { SchedulePickup } from './schedule-pickup'
@@ -20,8 +21,23 @@ type TabValue = (typeof TABS)[number]['value']
 
 export function CitizenPortal() {
   const [tab, setTab] = useState<TabValue>('report')
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS)
+  const [tickets, setTickets] = useState<any[]>([])
   const [highlightId, setHighlightId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      const { data, error } = await supabase
+        .from('issues')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (data) {
+        setTickets(data)
+      }
+    }
+
+    fetchComplaints()
+  }, [])
 
   function handleTicketCreated(ticket: Ticket) {
     setTickets((prev) => [ticket, ...prev])
@@ -48,7 +64,7 @@ export function CitizenPortal() {
         <ReportIssueForm
           onCreated={handleTicketCreated}
           onViewTracker={() => setTab('track')}
-          nextNumber={105 + tickets.length - INITIAL_TICKETS.length}
+          nextNumber={105 + tickets.length}
         />
       </TabsContent>
       <TabsContent value="track">
@@ -58,7 +74,7 @@ export function CitizenPortal() {
         <SchedulePickup
           onCreated={handleTicketCreated}
           onViewTracker={() => setTab('track')}
-          nextNumber={105 + tickets.length - INITIAL_TICKETS.length}
+          nextNumber={105 + tickets.length}
         />
       </TabsContent>
       <TabsContent value="awareness">

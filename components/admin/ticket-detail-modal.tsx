@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { CREWS, formatReported, isPickupRequest, type AdminStatus } from '@/lib/admin-data'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 export function getPriorityBadge(priority?: string) {
@@ -134,7 +135,13 @@ export function TicketDetailModal({
       issue.image_url.startsWith('/'))
 
   const handleStatusChange = async (newStatus: AdminStatus, crew?: string) => {
-    await onUpdateStatus(issue.id || issue.ticket_id, newStatus, crew)
+    const selectedIssue = issue
+    if (newStatus === 'In Progress') {
+      await supabase.from('issues').update({ status: 'In Progress' }).eq('id', selectedIssue.id)
+    } else if (newStatus === 'Resolved') {
+      await supabase.from('issues').update({ status: 'Resolved' }).eq('id', selectedIssue.id)
+    }
+    await onUpdateStatus(selectedIssue.id || selectedIssue.ticket_id, newStatus, crew)
     setLocalTicket((prev: any) => ({
       ...prev,
       status: newStatus,
@@ -289,7 +296,7 @@ export function TicketDetailModal({
           </span>
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
             <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
-              {description}
+              {issue.description || 'No description provided.'}
             </p>
           </div>
         </div>
@@ -309,8 +316,8 @@ export function TicketDetailModal({
                 <span className="text-xs font-mono text-slate-500 mt-0.5">
                   Lat: {latitude}, Long: {longitude}
                 </span>
-                {localTicket.location && (
-                  <span className="text-xs text-slate-600 mt-0.5">{localTicket.location}</span>
+                {issue.location && (
+                  <span className="text-xs text-slate-600 mt-0.5">{issue.location}</span>
                 )}
               </div>
             </div>

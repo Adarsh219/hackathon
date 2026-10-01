@@ -32,7 +32,7 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
 
   const counts = tickets.reduce(
     (acc, t) => {
-      acc[statusFromStep(t.stepIndex)] += 1
+      acc[statusFromStep(t.stepIndex ?? t.status)] += 1
       return acc
     },
     { pending: 0, 'in-progress': 0, resolved: 0 } as Record<TicketStatus, number>,
@@ -51,11 +51,12 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
 
       <ul className="flex flex-col gap-3">
         {tickets.map((ticket) => {
-          const status = STATUS_STYLES[statusFromStep(ticket.stepIndex)]
-          const open = openId === ticket.id
-          const panelId = `ticket-panel-${ticket.id}`
+          const ticketId = ticket.ticket_id || ticket.id
+          const status = STATUS_STYLES[statusFromStep(ticket.stepIndex ?? ticket.status)]
+          const open = openId === ticketId || openId === ticket.id
+          const panelId = `ticket-panel-${ticketId}`
           return (
-            <li key={ticket.id}>
+            <li key={ticketId}>
               <Card
                 className={cn(
                   'gap-0 rounded-2xl py-0 transition-shadow',
@@ -72,7 +73,7 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm font-semibold">#{ticket.id}</span>
+                      <span className="font-mono text-sm font-semibold">#{ticket.ticket_id || ticket.id}</span>
                       {ticket.category === 'Pickup Request' || ticket.category?.toLowerCase() === 'pickup request' ? (
                         <Badge className="rounded-md border border-emerald-300 bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-0.5 shadow-2xs">
                           <Truck className="size-3 mr-1 inline-block shrink-0" aria-hidden="true" />
@@ -101,7 +102,9 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5">
                       <CalendarDays className="size-4" aria-hidden="true" />
-                      <time dateTime={ticket.createdAt}>{dateFormatter.format(new Date(ticket.createdAt))}</time>
+                      <time dateTime={ticket.createdAt || ticket.created_at}>
+                        {dateFormatter.format(new Date(ticket.createdAt || ticket.created_at || Date.now()))}
+                      </time>
                     </span>
                   </div>
                 </button>

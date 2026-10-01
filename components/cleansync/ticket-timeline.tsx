@@ -13,9 +13,18 @@ const timeFormatter = new Intl.DateTimeFormat('en-US', {
 })
 
 export function TicketTimeline({ ticket }: { ticket: Ticket }) {
-  const [selected, setSelected] = useState(ticket.stepIndex)
-  const event = ticket.events[selected]
-  const progress = (ticket.stepIndex / (TIMELINE_STEPS.length - 1)) * 100
+  const stepIndex = typeof ticket.stepIndex === 'number'
+    ? ticket.stepIndex
+    : ((ticket as any).status === 'Resolved' ? 3 : (ticket as any).status === 'In Progress' || (ticket as any).status === 'Dispatched' ? 1 : 0)
+  const [selected, setSelected] = useState(stepIndex)
+  const events = ticket.events || [
+    { at: (ticket as any).created_at || ticket.createdAt || new Date().toISOString(), note: 'Complaint logged in system.' },
+    stepIndex >= 1 ? { at: (ticket as any).created_at || ticket.createdAt || new Date().toISOString(), note: 'Sanitation crew dispatched.' } : null,
+    stepIndex >= 2 ? { at: (ticket as any).created_at || ticket.createdAt || new Date().toISOString(), note: 'Cleanup in progress.' } : null,
+    stepIndex >= 3 ? { at: (ticket as any).created_at || ticket.createdAt || new Date().toISOString(), note: 'Grievance resolved.' } : null,
+  ]
+  const event = events[selected]
+  const progress = (stepIndex / (TIMELINE_STEPS.length - 1)) * 100
 
   return (
     <div className="flex flex-col gap-4">

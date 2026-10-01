@@ -823,7 +823,7 @@ export function AdminDashboard() {
     const fetchTickets = async () => {
       const { data, error } = await supabase
         .from('issues')
-        .select('id, ticket_id, title, category, description, ward, latitude, longitude, status, image_url, priority, user_email, created_at')
+        .select('*')
         .order('created_at', { ascending: false })
       if (data) setTickets(data)
     }
@@ -883,17 +883,28 @@ export function AdminDashboard() {
     })
   }, [tickets, query, ward, filterTab])
 
-  async function updateStatus(id: string, status: AdminStatus, crew?: string) {
-    await supabase.from('issues').update({ status, ...(crew ? { crew } : {}) }).eq('id', id)
+  async function updateStatus(selectedIssueOrId: any, status: AdminStatus, crew?: string) {
+    const selectedIssue = typeof selectedIssueOrId === 'object' && selectedIssueOrId !== null
+      ? selectedIssueOrId
+      : { id: selectedIssueOrId }
+
+    if (status === 'In Progress') {
+      await supabase.from('issues').update({ status: 'In Progress' }).eq('id', selectedIssue.id)
+    } else if (status === 'Resolved') {
+      await supabase.from('issues').update({ status: 'Resolved' }).eq('id', selectedIssue.id)
+    } else {
+      await supabase.from('issues').update({ status, ...(crew ? { crew } : {}) }).eq('id', selectedIssue.id)
+    }
+
     setTickets((prev) =>
-      prev.map((t) => (t.id === id || t.ticket_id === id ? { ...t, status, crew: crew ?? t.crew } : t))
+      prev.map((t) => (t.id === selectedIssue.id || t.ticket_id === selectedIssue.id ? { ...t, status, crew: crew ?? t.crew } : t))
     )
     setSelectedTicket((prev: any) =>
-      prev && (prev.id === id || prev.ticket_id === id)
+      prev && (prev.id === selectedIssue.id || prev.ticket_id === selectedIssue.id)
         ? { ...prev, status, crew: crew ?? prev.crew }
         : prev
     )
-    toast.success(`${id} updated`, { description: crew ? `${status} · ${crew}` : `Status set to ${status}` })
+    toast.success(`${selectedIssue.id} updated`, { description: crew ? `${status} · ${crew}` : `Status set to ${status}` })
   }
 
   if (isAdminAuthenticated === null || !isAdminAuthenticated) {

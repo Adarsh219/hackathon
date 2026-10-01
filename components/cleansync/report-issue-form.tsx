@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { AlertCircle, CheckCircle2, Crosshair, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,12 +27,34 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
   const [photos, setPhotos] = useState<File[]>([])
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [priority, setPriority] = useState<Priority>('medium')
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null)
+  let [coords, setCoords] = useState<{ lat?: number; lng?: number; latitude?: number; longitude?: number } | null>(null)
+  const [title, setTitle] = useState('')
+  const [ward, setWard] = useState('Ward 4')
+  const [user, setUser] = useState<{ email?: string } | null>(null)
   const [locating, setLocating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ category?: string; location?: string }>({})
+
+  useEffect(() => {
+    let isMounted = true
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('cleansync_user') : null
+      if (stored) {
+        setUser(JSON.parse(stored))
+      } else {
+        supabase.auth.getUser().then(({ data }) => {
+          if (data?.user && isMounted) {
+            setUser(data.user)
+          }
+        })
+      }
+    } catch {}
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -54,6 +76,8 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
     navigator.geolocation.getCurrentPosition(
       ({ coords: posCoords }) => {
         setCoords({
+          lat: posCoords.latitude,
+          lng: posCoords.longitude,
           latitude: posCoords.latitude,
           longitude: posCoords.longitude,
         })
@@ -82,36 +106,37 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
 
     setIsSubmitting(true)
 
-    // Extract category, description, latitude, and longitude
-    let latitude = coords?.latitude
-    let longitude = coords?.longitude
-
-    if (!latitude || !longitude) {
+    if (!coords?.lat || !coords?.lng) {
       const match = location.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/)
       if (match) {
-        latitude = parseFloat(match[1])
-        longitude = parseFloat(match[2])
+        coords = {
+          lat: parseFloat(match[1]),
+          lng: parseFloat(match[2]),
+          latitude: parseFloat(match[1]),
+          longitude: parseFloat(match[2]),
+        }
       }
     }
 
     const now = new Date().toISOString()
     const id = `ISS-${nextNumber}`
-    const priorityCapitalized = priority ? (priority.charAt(0).toUpperCase() + priority.slice(1)) : 'Medium'
 
     try {
-      const { data, error } = await supabase.from('issues').insert([{
-        ticket_id: id,
-        title: category || 'Civic Issue',
-        category: category,
-        description: description || 'Reported via CleanSync Citizen App',
-        location: location.trim(),
-        latitude: latitude || 26.8467,
-        longitude: longitude || 80.9462,
-        ward: 'Ward 4',
-        status: 'Pending',
-        priority: priorityCapitalized,
-        image_url: imageUrl || null,
-      }])
+      const { data, error } = await supabase.from('issues').insert([
+        {
+          title: title || `${category} Report`,
+          category: category,
+          description: description || '',
+          location: location || ward || 'Ward 4',
+          ward: ward || 'Ward 4',
+          latitude: coords?.lat ?? 26.8467,
+          longitude: coords?.lng ?? 80.9462,
+          status: 'Pending',
+          priority: priority || 'Medium',
+          image_url: imageUrl || null,
+          user_email: user?.email || 'citizen@spectrum.local'
+        }
+      ])
 
       if (error) {
         setSubmitError(error.message || 'Error inserting issue into Supabase.')
