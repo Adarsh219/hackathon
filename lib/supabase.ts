@@ -428,6 +428,18 @@ export class SupabaseQueryBuilder<T = any> implements PromiseLike<{ data: T | nu
             return 0
           })
         }
+        if (this.selectQuery && this.selectQuery !== '*') {
+          const cols = this.selectQuery.split(',').map((c) => c.trim().toLowerCase())
+          result = result.map((item) => {
+            const picked: any = {}
+            for (const key of Object.keys(item)) {
+              if (cols.includes(key.toLowerCase())) {
+                picked[key] = item[key]
+              }
+            }
+            return picked
+          })
+        }
         return { data: result as unknown as T, error: null }
       }
     }

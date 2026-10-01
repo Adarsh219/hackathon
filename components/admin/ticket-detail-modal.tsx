@@ -84,6 +84,33 @@ export function TicketDetailModal({
     setLocalTicket(ticket)
   }, [ticket])
 
+  // Fetch full record on-demand if image_url is not present on ticket
+  useEffect(() => {
+    if (!isOpen || !ticket) return
+    const id = ticket.id || ticket.ticket_id
+    if (!id || ticket.image_url) return
+
+    let isMounted = true
+    supabase
+      .from('issues')
+      .select('*')
+      .eq('id', id)
+      .then(({ data }) => {
+        if (!isMounted) return
+        const fullRecord = Array.isArray(data) ? data[0] : data
+        if (fullRecord) {
+          setLocalTicket((prev: any) => ({
+            ...prev,
+            ...fullRecord,
+          }))
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [isOpen, ticket])
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return

@@ -823,12 +823,34 @@ export function AdminDashboard() {
     const fetchTickets = async () => {
       const { data, error } = await supabase
         .from('issues')
-        .select('*')
+        .select('id, ticket_id, category, priority, location, ward, created_at, status, description')
         .order('created_at', { ascending: false })
       if (data) setTickets(data)
     }
     fetchTickets()
   }, [isAdminAuthenticated])
+
+  const handleViewDetails = async (ticket: any) => {
+    setSelectedTicket(ticket)
+    const id = ticket.id || ticket.ticket_id
+    if (id) {
+      try {
+        const { data } = await supabase
+          .from('issues')
+          .select('*')
+          .eq('id', id)
+        const fullRecord = Array.isArray(data) ? data[0] : data
+        if (fullRecord) {
+          setSelectedTicket((prev: any) => ({
+            ...prev,
+            ...fullRecord,
+          }))
+        }
+      } catch (err) {
+        console.error('Failed to fetch ticket record on-demand:', err)
+      }
+    }
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -936,7 +958,7 @@ export function AdminDashboard() {
             tabCounts={tabCounts}
             onUpdate={updateStatus}
             onReject={handleReject}
-            onViewDetails={(ticket) => setSelectedTicket(ticket)}
+            onViewDetails={handleViewDetails}
           />
           <div className="flex flex-col gap-6">
             <HotspotsCard />

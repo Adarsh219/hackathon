@@ -8,12 +8,25 @@ import { AdminDashboard } from '@/components/admin/admin-dashboard'
 export { AdminDashboard } from '@/components/admin/admin-dashboard'
 export { TicketDetailModal } from '@/components/admin/ticket-detail-modal'
 
-// Admin issues data fetch query
+// Admin issues data fetch query (excluding heavy Base64 image payloads for fast initial load)
 export async function fetchAdminIssues() {
   return await supabase
     .from('issues')
-    .select('*')
+    .select('id, ticket_id, category, priority, location, ward, created_at, status, description')
     .order('created_at', { ascending: false })
+}
+
+// Fetch single ticket full record on-demand (including image_url)
+export async function fetchTicketDetails(id: string) {
+  const res = await supabase
+    .from('issues')
+    .select('*')
+    .eq('id', id)
+
+  if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+    return { data: res.data[0], error: null }
+  }
+  return res
 }
 
 export { stripAuditTags } from '@/lib/cleansync-data'
