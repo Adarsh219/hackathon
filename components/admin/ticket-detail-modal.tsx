@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { CREWS, formatReported, type AdminStatus } from '@/lib/admin-data'
+import { CREWS, formatReported, isPickupRequest, type AdminStatus } from '@/lib/admin-data'
 import { cn } from '@/lib/utils'
 
 export function getPriorityBadge(priority?: string) {
@@ -110,6 +110,7 @@ export function TicketDetailModal({
   const issue = localTicket
   const ticketId = issue.ticket_id || issue.id || 'N/A'
   const category = issue.category || issue.title || 'Civic Issue'
+  const isPickup = isPickupRequest(issue.category, issue.title)
   const ward = issue.ward || 'Ward 4'
   const status = issue.status || 'Pending'
   const priority = issue.priority || 'Medium'
@@ -119,6 +120,12 @@ export function TicketDetailModal({
   const longitude = issue.longitude ?? 80.9462
   const reportedRaw = issue.created_at || issue.reportedAt || new Date().toISOString()
   const { date, time } = formatReported(reportedRaw)
+
+  // Extract pickup-specific details from description if present
+  const matchDate = description.match(/Scheduled Date:\s*([^\.]+)/i)
+  const scheduledDate = matchDate ? matchDate[1].trim() : null
+  const matchAddress = description.match(/Instructions\/Address:\s*(.+)$/i)
+  const pickupAddress = matchAddress ? matchAddress[1].trim() : (issue.location || null)
 
   const isValidImageUrl =
     typeof issue?.image_url === 'string' &&
@@ -154,6 +161,12 @@ export function TicketDetailModal({
               <span className="font-mono text-xs font-semibold text-slate-500">
                 #{ticketId}
               </span>
+              {isPickup && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 shadow-2xs whitespace-nowrap">
+                  <Truck className="size-3 text-purple-600" aria-hidden="true" />
+                  Bulk Pickup
+                </span>
+              )}
               <Badge
                 variant="outline"
                 className={cn(
@@ -191,6 +204,54 @@ export function TicketDetailModal({
             <X className="size-5" />
           </button>
         </div>
+
+        {/* Doorstep Bulk Collection Request Banner */}
+        {isPickup && (
+          <div className="flex flex-col gap-3 rounded-xl border border-purple-200 bg-purple-50/70 p-4 shadow-2xs animate-in fade-in duration-150">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
+                <Truck className="size-4.5" aria-hidden="true" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold tracking-tight text-purple-950">
+                  Doorstep Bulk Collection Request
+                </span>
+                <span className="text-xs text-purple-700">
+                  Designated municipal doorstep pickup for bulky, e-waste, or segregated garden materials.
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-2.5 sm:grid-cols-2 rounded-lg border border-purple-100 bg-white/90 p-3.5 text-xs text-slate-800">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-800">
+                  Citizen Requested Date
+                </span>
+                <span className="font-semibold text-slate-900 text-sm">
+                  {scheduledDate || date || 'Scheduled with crew'}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-800">
+                  Pickup Address & Instructions
+                </span>
+                <span className="font-medium text-slate-900 truncate" title={pickupAddress || issue.location || 'Specified at doorstep'}>
+                  {pickupAddress || issue.location || 'Specified at doorstep'}
+                </span>
+              </div>
+              {issue.user_email && (
+                <div className="flex flex-col gap-0.5 sm:col-span-2 border-t border-purple-100 pt-2 mt-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-800">
+                    Citizen Contact Email
+                  </span>
+                  <span className="font-mono text-xs text-slate-700">
+                    {issue.user_email}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Incident Photo */}
         <div className="flex flex-col gap-1.5">
@@ -268,17 +329,31 @@ export function TicketDetailModal({
         {/* Action Bar */}
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={status === 'In Progress'}
-              onClick={() => handleStatusChange('In Progress')}
-              className="h-8 gap-1.5 text-xs font-medium text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 disabled:opacity-50 cursor-pointer"
-            >
-              <Loader className="size-3.5 text-blue-600" aria-hidden="true" />
-              Mark In Progress
-            </Button>
+            {isPickup ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={status === 'In Progress'}
+                onClick={() => handleStatusChange('In Progress')}
+                className="h-8 gap-1.5 text-xs font-medium text-purple-700 border-purple-200 bg-purple-50 hover:bg-purple-100 hover:text-purple-800 disabled:opacity-50 cursor-pointer shadow-2xs"
+              >
+                <CheckCircle2 className="size-3.5 text-purple-600" aria-hidden="true" />
+                Confirm Pickup Schedule
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={status === 'In Progress'}
+                onClick={() => handleStatusChange('In Progress')}
+                className="h-8 gap-1.5 text-xs font-medium text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 disabled:opacity-50 cursor-pointer"
+              >
+                <Loader className="size-3.5 text-blue-600" aria-hidden="true" />
+                Mark In Progress
+              </Button>
+            )}
 
             <Button
               type="button"
@@ -289,7 +364,7 @@ export function TicketDetailModal({
               className="h-8 gap-1.5 text-xs font-medium text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 disabled:opacity-50 cursor-pointer"
             >
               <CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden="true" />
-              Mark Resolved
+              {isPickup ? 'Mark Pickup Completed' : 'Mark Resolved'}
             </Button>
 
             {localTicket.crew && (
@@ -306,10 +381,22 @@ export function TicketDetailModal({
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700 shadow-2xs cursor-pointer"
+                  className={cn(
+                    'h-8 gap-1.5 rounded-lg px-3 text-xs font-medium text-white shadow-2xs cursor-pointer',
+                    isPickup ? 'bg-purple-600 hover:bg-purple-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                  )}
                 >
-                  <Send className="size-3.5" aria-hidden="true" />
-                  Dispatch Crew
+                  {isPickup ? (
+                    <>
+                      <Truck className="size-3.5" aria-hidden="true" />
+                      Dispatch Collection Truck
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-3.5" aria-hidden="true" />
+                      Dispatch Crew
+                    </>
+                  )}
                 </Button>
               }
             />
@@ -318,7 +405,7 @@ export function TicketDetailModal({
               className="w-56 rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg"
             >
               <DropdownMenuLabel className="text-xs font-medium text-slate-500">
-                Assign Active Crew
+                {isPickup ? 'Assign Collection Truck' : 'Assign Active Crew'}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-slate-100" />
               {CREWS.map((c) => (

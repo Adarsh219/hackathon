@@ -254,3 +254,15 @@ export function formatReported(iso: string) {
     time: d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
   }
 }
+
+export function isPickupRequest(category?: string, title?: string): boolean {
+  const cat = (category || '').trim().toLowerCase()
+  const tit = (title || '').trim().toLowerCase()
+  return (
+    cat === 'pickup request' ||
+    cat === 'bulk waste pickup' ||
+    cat.includes('pickup') ||
+    tit.startsWith('bulk waste pickup') ||
+    tit.includes('bulk waste pickup')
+  )
+}

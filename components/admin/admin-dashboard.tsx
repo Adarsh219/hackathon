@@ -54,6 +54,7 @@ import {
   INITIAL_TICKETS,
   WARDS,
   formatReported,
+  isPickupRequest,
   type AdminStatus,
   type AdminTicket,
 } from '@/lib/admin-data'
@@ -315,12 +316,32 @@ const STATUS_STYLE: Record<string, string> = {
 export type GrievanceTableProps = {
   tickets: any[]
   total: number
+  filterTab: 'all' | 'pending' | 'in-progress' | 'pickups' | 'resolved'
+  onFilterChange: (tab: 'all' | 'pending' | 'in-progress' | 'pickups' | 'resolved') => void
+  tabCounts: Record<string, number>
   onUpdate: (id: string, status: AdminStatus, crew?: string) => void
   onReject?: (id: string) => void
   onViewDetails?: (ticket: any) => void
 }
 
-export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetails }: GrievanceTableProps) {
+const QUEUE_TABS = [
+  { id: 'all', label: 'All Issues' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'in-progress', label: 'In Progress' },
+  { id: 'pickups', label: 'Pickup Requests', icon: Truck },
+  { id: 'resolved', label: 'Resolved' },
+] as const
+
+export function GrievanceTable({
+  tickets,
+  total,
+  filterTab,
+  onFilterChange,
+  tabCounts,
+  onUpdate,
+  onReject,
+  onViewDetails,
+}: GrievanceTableProps) {
   return (
     <Card className="min-w-0 gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white py-0 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-slate-200 bg-white px-5 py-4">
@@ -337,6 +358,43 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetai
           Live queue
         </Badge>
       </CardHeader>
+
+      {/* Quick Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 bg-slate-50/60 px-5 py-2.5 text-xs">
+        <span className="mr-1 text-slate-400 font-medium">Queue:</span>
+        {QUEUE_TABS.map((tab) => {
+          const active = filterTab === tab.id
+          const count = tabCounts[tab.id] ?? 0
+          const Icon = 'icon' in tab ? tab.icon : null
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onFilterChange(tab.id as any)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition-colors cursor-pointer',
+                active
+                  ? tab.id === 'pickups'
+                    ? 'bg-purple-600 text-white shadow-2xs'
+                    : 'bg-emerald-600 text-white shadow-2xs'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              )}
+            >
+              {Icon && <Icon className="size-3" />}
+              <span>{tab.label}</span>
+              <span
+                className={cn(
+                  'rounded-full px-1.5 py-0.2 text-[10px] tabular-nums',
+                  active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                )}
+              >
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       <CardContent className="px-0">
         <Table className="w-full text-slate-900">
           <TableHeader>
@@ -363,6 +421,7 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetai
             {tickets.map((t) => {
               const ticketId = t.ticket_id || t.id
               const category = t.category || t.title || 'Civic Issue'
+              const isPickup = isPickupRequest(t.category, t.title)
               const ward = t.ward || 'Ward 4'
               const status = t.status || 'Pending'
               const location = t.location || t.description || 'Sector 4 Market'
@@ -372,7 +431,16 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetai
               return (
                 <TableRow key={ticketId} className="border-b border-slate-100 transition-colors hover:bg-slate-50/70">
                   <TableCell className="pl-5 font-mono text-xs font-semibold text-slate-900">{ticketId}</TableCell>
-                  <TableCell className="text-sm font-medium text-slate-800">{category}</TableCell>
+                  <TableCell className="text-sm font-medium text-slate-800">
+                    {isPickup ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-xs font-semibold text-purple-700 shadow-2xs whitespace-nowrap">
+                        <Truck className="size-3 text-purple-600" aria-hidden="true" />
+                        Bulk Pickup
+                      </span>
+                    ) : (
+                      category
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={cn(
@@ -467,7 +535,7 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetai
                             className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                           >
                             <Loader className="size-4 text-slate-500" aria-hidden="true" />
-                            Mark as In Progress
+                            {isPickup ? 'Confirm Schedule' : 'Mark as In Progress'}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             disabled={status === 'Resolved'}
@@ -475,13 +543,13 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetai
                             className="text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                           >
                             <CheckCircle2 className="size-4 text-emerald-600" aria-hidden="true" />
-                            Mark as Resolved
+                            {isPickup ? 'Mark Pickup Completed' : 'Mark as Resolved'}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-slate-100" />
                           <DropdownMenuSub>
                             <DropdownMenuSubTrigger className="text-slate-700 hover:bg-slate-50 hover:text-slate-900">
-                              <Send className="size-4 text-slate-500" aria-hidden="true" />
-                              Dispatch Team
+                              <Truck className="size-4 text-slate-500 mr-2" aria-hidden="true" />
+                              {isPickup ? 'Dispatch Collection Truck' : 'Dispatch Team'}
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent className="rounded-xl border border-slate-200 bg-white text-slate-900 shadow-lg">
                               {CREWS.map((c) => (
@@ -691,6 +759,7 @@ export function AdminDashboard() {
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null)
   const [query, setQuery] = useState('')
   const [ward, setWard] = useState('all')
+  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'in-progress' | 'pickups' | 'resolved'>('all')
 
   useEffect(() => {
     let isMounted = true
@@ -754,7 +823,7 @@ export function AdminDashboard() {
     const fetchTickets = async () => {
       const { data, error } = await supabase
         .from('issues')
-        .select('id, ticket_id, title, category, description, ward, latitude, longitude, status, image_url, priority, created_at')
+        .select('id, ticket_id, title, category, description, ward, latitude, longitude, status, image_url, priority, user_email, created_at')
         .order('created_at', { ascending: false })
       if (data) setTickets(data)
     }
@@ -776,18 +845,43 @@ export function AdminDashboard() {
     toast.success(`Ticket #${id} rejected and removed`)
   }
 
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0, pending: 0, 'in-progress': 0, pickups: 0, resolved: 0 }
+    tickets.forEach((t) => {
+      const ticketWard = t.ward || 'Ward 4'
+      if (ward !== 'all' && ticketWard !== ward) return
+      counts.all++
+      const isPickup = isPickupRequest(t.category, t.title)
+      if (isPickup) counts.pickups++
+      const s = (t.status || 'Pending').toLowerCase()
+      if (s === 'pending') counts.pending++
+      else if (s === 'in progress' || s === 'dispatched') counts['in-progress']++
+      else if (s === 'resolved') counts.resolved++
+    })
+    return counts
+  }, [tickets, ward])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return tickets.filter((t) => {
       const ticketWard = t.ward || 'Ward 4'
       if (ward !== 'all' && ticketWard !== ward) return false
+
+      const isPickup = isPickupRequest(t.category, t.title)
+      const s = (t.status || 'Pending').toLowerCase()
+
+      if (filterTab === 'pickups' && !isPickup) return false
+      if (filterTab === 'pending' && s !== 'pending') return false
+      if (filterTab === 'in-progress' && s !== 'in progress' && s !== 'dispatched') return false
+      if (filterTab === 'resolved' && s !== 'resolved') return false
+
       if (!q) return true
       const ticketId = t.ticket_id || t.id || ''
       const category = t.category || t.title || ''
       const location = t.location || t.description || ''
       return [ticketId, category, location, ticketWard].some((v) => v.toLowerCase().includes(q))
     })
-  }, [tickets, query, ward])
+  }, [tickets, query, ward, filterTab])
 
   async function updateStatus(id: string, status: AdminStatus, crew?: string) {
     await supabase.from('issues').update({ status, ...(crew ? { crew } : {}) }).eq('id', id)
@@ -826,6 +920,9 @@ export function AdminDashboard() {
           <GrievanceTable
             tickets={filtered}
             total={tickets.length}
+            filterTab={filterTab}
+            onFilterChange={setFilterTab}
+            tabCounts={tabCounts}
             onUpdate={updateStatus}
             onReject={handleReject}
             onViewDetails={(ticket) => setSelectedTicket(ticket)}
