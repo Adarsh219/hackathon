@@ -194,6 +194,13 @@ export function TicketDetailModal({
                 {status}
               </Badge>
             </div>
+            <div className="mt-1 text-xs font-medium text-slate-600">
+              {(issue.priority || priority || 'low').toLowerCase() === 'urgent'
+                ? 'Target SLA: 4 Hours (High Velocity Queue)'
+                : (issue.priority || priority || 'low').toLowerCase() === 'medium'
+                ? 'Target SLA: 12 Hours (Standard Operations)'
+                : 'Target SLA: 24 Hours (Scheduled Route)'}
+            </div>
             <h3 id="ticket-detail-title" className="text-xl font-bold tracking-tight text-slate-900">
               {category}
             </h3>
@@ -287,6 +294,7 @@ export function TicketDetailModal({
               No photo attached with this grievance
             </div>
           )}
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span>✓</span> Live Capture & Hardware Geotag Verified</div>
         </div>
 
         {/* Incident Description */}

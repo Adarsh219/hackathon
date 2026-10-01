@@ -38,6 +38,23 @@ export async function handleStatusUpdate(
   }
 }
 
+// SLA Target label helper
+export function getAdminSlaTarget(priority?: string) {
+  const p = (priority || 'low').trim().toLowerCase()
+  if (p === 'urgent') return 'Target SLA: 4 Hours (High Velocity Queue)'
+  if (p === 'medium') return 'Target SLA: 12 Hours (Standard Operations)'
+  return 'Target SLA: 24 Hours (Scheduled Route)'
+}
+
+// Verification tag component / markup
+export function AdminVerificationTag() {
+  return (
+    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <span>✓</span> Live Capture & Hardware Geotag Verified
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)

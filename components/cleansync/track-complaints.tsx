@@ -85,14 +85,38 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={cn('rounded-full', status.className)}>
-                        {status.label}
-                      </Badge>
-                      <ChevronDown
-                        className={cn('size-4 text-muted-foreground transition-transform', open && 'rotate-180')}
-                        aria-hidden="true"
-                      />
+                    <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn('rounded-full', status.className)}>
+                          {status.label}
+                        </Badge>
+                        <ChevronDown
+                          className={cn('size-4 text-muted-foreground transition-transform', open && 'rotate-180')}
+                          aria-hidden="true"
+                        />
+                      </div>
+                      {(() => {
+                        const p = (ticket.priority || 'low').toLowerCase()
+                        if (p === 'urgent') {
+                          return (
+                            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              ⏱ SLA: Expected resolution in 2-4 hrs
+                            </span>
+                          )
+                        }
+                        if (p === 'medium') {
+                          return (
+                            <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                              ⏱ SLA: Expected resolution in 8-12 hrs
+                            </span>
+                          )
+                        }
+                        return (
+                          <span className="text-xs font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded-full">
+                            ⏱ SLA: Expected resolution in 24 hrs
+                          </span>
+                        )
+                      })()}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:gap-5">
