@@ -82,15 +82,23 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
       }
     }
 
+    const now = new Date().toISOString()
+    const id = `ISS-${nextNumber}`
+    const priorityCapitalized = priority ? (priority.charAt(0).toUpperCase() + priority.slice(1)) : 'Medium'
+
     try {
       const { data, error } = await supabase.from('issues').insert([{
+        ticket_id: id,
         title: category || 'Civic Issue',
         category: category,
         description: description || 'Reported via CleanSync Citizen App',
+        location: location.trim(),
         latitude: latitude || 26.8467,
         longitude: longitude || 80.9462,
         ward: 'Ward 4',
-        status: 'Pending'
+        status: 'Pending',
+        priority: priorityCapitalized,
+        image_url: photos.length > 0 ? photos[0] : null,
       }])
 
       if (error) {
@@ -101,8 +109,6 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
       }
 
       // Success
-      const now = new Date().toISOString()
-      const id = `ISS-${nextNumber}`
 
       if (onCreated) {
         onCreated({

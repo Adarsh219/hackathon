@@ -267,21 +267,10 @@ class SupabaseAuthClient {
   }
 }
 
+import { INITIAL_TICKETS } from './admin-data'
+
 // In-memory fallback store initialized with default issues
-const getInitialIssues = () => [
-  { id: 'ISS-1284', ticket_id: 'ISS-1284', title: 'Illegal Dumping', category: 'Illegal Dumping', location: 'Sector 4 Market, Gate 2', ward: 'Ward 4', reportedAt: '2026-09-30T08:42:00', created_at: '2026-09-30T08:42:00', status: 'Pending' },
-  { id: 'ISS-1283', ticket_id: 'ISS-1283', title: 'Overflowing Bin', category: 'Overflowing Bin', location: 'Station Road, Bus Stand', ward: 'Ward 7', reportedAt: '2026-09-30T08:15:00', created_at: '2026-09-30T08:15:00', status: 'In Progress', crew: 'Crew Alpha' },
-  { id: 'ISS-1282', ticket_id: 'ISS-1282', title: 'Garbage on Road', category: 'Garbage on Road', location: 'Riverside Walk, Pier 3', ward: 'Ward 9', reportedAt: '2026-09-30T07:58:00', created_at: '2026-09-30T07:58:00', status: 'Pending' },
-  { id: 'ISS-1281', ticket_id: 'ISS-1281', title: 'Dead Animal', category: 'Dead Animal', location: 'NH-48 Service Lane', ward: 'Ward 12', reportedAt: '2026-09-30T07:31:00', created_at: '2026-09-30T07:31:00', status: 'Dispatched', crew: 'Crew Delta' },
-  { id: 'ISS-1280', ticket_id: 'ISS-1280', title: 'Missed Pickup', category: 'Missed Pickup', location: 'Old Town, Lane 14', ward: 'Ward 3', reportedAt: '2026-09-30T06:47:00', created_at: '2026-09-30T06:47:00', status: 'Resolved' },
-  { id: 'ISS-1279', ticket_id: 'ISS-1279', title: 'Overflowing Bin', category: 'Overflowing Bin', location: 'Sector 4 Market, Fish Stall', ward: 'Ward 4', reportedAt: '2026-09-29T22:10:00', created_at: '2026-09-29T22:10:00', status: 'In Progress', crew: 'Crew Bravo' },
-  { id: 'ISS-1278', ticket_id: 'ISS-1278', title: 'Construction Debris', category: 'Construction Debris', location: 'Industrial Area Phase 2', ward: 'Ward 12', reportedAt: '2026-09-29T19:26:00', created_at: '2026-09-29T19:26:00', status: 'Pending' },
-  { id: 'ISS-1277', ticket_id: 'ISS-1277', title: 'Illegal Dumping', category: 'Illegal Dumping', location: 'Station Road, Flyover', ward: 'Ward 7', reportedAt: '2026-09-29T17:02:00', created_at: '2026-09-29T17:02:00', status: 'Pending' },
-  { id: 'ISS-1276', ticket_id: 'ISS-1276', title: 'Drain Blockage', category: 'Drain Blockage', location: 'Riverside Colony, Block C', ward: 'Ward 9', reportedAt: '2026-09-29T15:40:00', created_at: '2026-09-29T15:40:00', status: 'Resolved' },
-  { id: 'ISS-1275', ticket_id: 'ISS-1275', title: 'Garbage on Road', category: 'Garbage on Road', location: 'Clock Tower Circle', ward: 'Ward 3', reportedAt: '2026-09-29T13:18:00', created_at: '2026-09-29T13:18:00', status: 'In Progress', crew: 'Crew Charlie' },
-  { id: 'ISS-1274', ticket_id: 'ISS-1274', title: 'E-waste Dumping', category: 'E-waste Dumping', location: 'Industrial Area Phase 1', ward: 'Ward 12', reportedAt: '2026-09-29T11:05:00', created_at: '2026-09-29T11:05:00', status: 'Dispatched', crew: 'Crew Alpha' },
-  { id: 'ISS-1273', ticket_id: 'ISS-1273', title: 'Missed Pickup', category: 'Missed Pickup', location: 'Sector 4, Housing Block B', ward: 'Ward 4', reportedAt: '2026-09-29T09:47:00', created_at: '2026-09-29T09:47:00', status: 'Resolved' },
-]
+const getInitialIssues = () => [...INITIAL_TICKETS]
 
 let inMemoryIssuesStore: any[] = getInitialIssues()
 
@@ -398,6 +387,8 @@ export class SupabaseQueryBuilder<T = any> implements PromiseLike<{ data: T | nu
             status: rec.status || 'Pending',
             latitude: rec.latitude || 26.8467,
             longitude: rec.longitude || 80.9462,
+            priority: rec.priority || 'Medium',
+            image_url: rec.image_url || null,
             created_at: rec.created_at || new Date().toISOString(),
             reportedAt: rec.created_at || new Date().toISOString(),
           }

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock,
+  Eye,
   Flame,
   Loader,
   Loader2,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { TicketDetailModal, getPriorityBadge } from './ticket-detail-modal'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -315,9 +317,10 @@ export type GrievanceTableProps = {
   total: number
   onUpdate: (id: string, status: AdminStatus, crew?: string) => void
   onReject?: (id: string) => void
+  onViewDetails?: (ticket: any) => void
 }
 
-export function GrievanceTable({ tickets, total, onUpdate, onReject }: GrievanceTableProps) {
+export function GrievanceTable({ tickets, total, onUpdate, onReject, onViewDetails }: GrievanceTableProps) {
   return (
     <Card className="min-w-0 gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white py-0 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-slate-200 bg-white px-5 py-4">
@@ -340,18 +343,19 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject }: Grievance
             <TableRow className="border-b border-slate-200 bg-slate-50/80 hover:bg-slate-50/80">
               <TableHead className="pl-5 text-xs font-semibold text-slate-600">Ticket ID</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Category</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-600">Priority</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Location / Ward</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Date Reported</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Status</TableHead>
               <TableHead className="pr-5 text-right text-xs font-semibold text-slate-600">
-                <span className="sr-only">Actions</span>
+                Actions
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tickets.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">
                   No tickets match your filters.
                 </TableCell>
               </TableRow>
@@ -362,12 +366,24 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject }: Grievance
               const ward = t.ward || 'Ward 4'
               const status = t.status || 'Pending'
               const location = t.location || t.description || 'Sector 4 Market'
+              const priorityConfig = getPriorityBadge(t.priority)
               const reportedRaw = t.created_at || t.reportedAt || new Date().toISOString()
               const { date, time } = formatReported(reportedRaw)
               return (
                 <TableRow key={ticketId} className="border-b border-slate-100 transition-colors hover:bg-slate-50/70">
                   <TableCell className="pl-5 font-mono text-xs font-semibold text-slate-900">{ticketId}</TableCell>
                   <TableCell className="text-sm font-medium text-slate-800">{category}</TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold shadow-2xs whitespace-nowrap',
+                        priorityConfig.className
+                      )}
+                    >
+                      <span className={cn('size-1.5 rounded-full', priorityConfig.dot)} aria-hidden="true" />
+                      {priorityConfig.label}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="max-w-56 truncate text-sm font-medium text-slate-900">{location}</span>
@@ -398,6 +414,18 @@ export function GrievanceTable({ tickets, total, onUpdate, onReject }: Grievance
                   </TableCell>
                   <TableCell className="pr-5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onViewDetails?.(t)}
+                        className="h-7 text-xs border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 px-2.5 rounded-lg cursor-pointer flex items-center gap-1 shadow-2xs font-medium"
+                        title="View full report dossier"
+                      >
+                        <Eye className="size-3 text-slate-500" />
+                        <span>View Details</span>
+                      </Button>
+
                       <Button
                         type="button"
                         variant="outline"
@@ -660,6 +688,7 @@ export function AdminDashboard() {
   const router = useRouter()
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean | null>(null)
   const [tickets, setTickets] = useState<any[]>([])
+  const [selectedTicket, setSelectedTicket] = useState<any | null>(null)
   const [query, setQuery] = useState('')
   const [ward, setWard] = useState('all')
 
@@ -725,7 +754,7 @@ export function AdminDashboard() {
     const fetchTickets = async () => {
       const { data, error } = await supabase
         .from('issues')
-        .select('*')
+        .select('id, ticket_id, title, category, description, ward, latitude, longitude, status, image_url, priority, created_at')
         .order('created_at', { ascending: false })
       if (data) setTickets(data)
     }
@@ -743,6 +772,7 @@ export function AdminDashboard() {
   const handleReject = async (id: string) => {
     await supabase.from('issues').update({ status: 'Rejected' }).eq('id', id)
     setTickets((prev) => prev.filter((ticket) => ticket.id !== id && ticket.ticket_id !== id))
+    setSelectedTicket((prev: any) => (prev && (prev.id === id || prev.ticket_id === id) ? null : prev))
     toast.success(`Ticket #${id} rejected and removed`)
   }
 
@@ -763,6 +793,11 @@ export function AdminDashboard() {
     await supabase.from('issues').update({ status, ...(crew ? { crew } : {}) }).eq('id', id)
     setTickets((prev) =>
       prev.map((t) => (t.id === id || t.ticket_id === id ? { ...t, status, crew: crew ?? t.crew } : t))
+    )
+    setSelectedTicket((prev: any) =>
+      prev && (prev.id === id || prev.ticket_id === id)
+        ? { ...prev, status, crew: crew ?? prev.crew }
+        : prev
     )
     toast.success(`${id} updated`, { description: crew ? `${status} · ${crew}` : `Status set to ${status}` })
   }
@@ -793,6 +828,7 @@ export function AdminDashboard() {
             total={tickets.length}
             onUpdate={updateStatus}
             onReject={handleReject}
+            onViewDetails={(ticket) => setSelectedTicket(ticket)}
           />
           <div className="flex flex-col gap-6">
             <HotspotsCard />
@@ -800,6 +836,13 @@ export function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      <TicketDetailModal
+        ticket={selectedTicket}
+        isOpen={!!selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onUpdateStatus={updateStatus}
+      />
     </div>
   )
 }
