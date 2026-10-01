@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ISSUE_CATEGORIES, type IssueCategory, type Priority, type Ticket } from '@/lib/cleansync-data'
+import { ISSUE_CATEGORIES, type IssueCategory, type Priority, type Ticket, stripAuditTags } from '@/lib/cleansync-data'
 import { supabase } from '@/lib/supabase'
+import { verifyCameraMetadata } from '@/app/report/page'
 import { PhotoDropzone } from './photo-dropzone'
 import { PrioritySelector } from './priority-selector'
 
@@ -31,7 +32,7 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
   const [title, setTitle] = useState('')
   const [ward, setWard] = useState('Ward 4')
   const [user, setUser] = useState<{ email?: string } | null>(null)
-  const [isDeviceVerified, setIsDeviceVerified] = useState<boolean>(true)
+  const [isDeviceVerified, setIsDeviceVerified] = useState<boolean>(false)
   const [locating, setLocating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -57,20 +58,16 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
     }
   }, [])
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      let verified = false
       try {
-        const hasMetadata = Boolean(file.lastModified || (file as any).lastModifiedDate || file.size > 0 || file.name)
-        const hasGpsCoords = Boolean(coords?.lat || coords?.lng || coords?.latitude || coords?.longitude)
-        if (hasMetadata || hasGpsCoords) {
-          setIsDeviceVerified(true)
-        } else {
-          setIsDeviceVerified(true)
-        }
+        verified = await verifyCameraMetadata(file)
       } catch {
-        setIsDeviceVerified(true)
+        verified = false
       }
+      setIsDeviceVerified(verified)
 
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -133,17 +130,18 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
 
     const now = new Date().toISOString()
     const id = `ISS-${nextNumber}`
-    const verificationTag = '[VERIFIED: Live Geotag + Hardware Metadata]'
-    const verifiedDescription = description
-      ? (description.includes(verificationTag) ? description : `${description} ${verificationTag}`)
-      : verificationTag
+    const auditTag = isDeviceVerified
+      ? '[VERIFIED: Hardware Live Capture]'
+      : '[FLAGGED: Missing Camera EXIF]'
+    const cleanDesc = stripAuditTags(description)
+    const verifiedDescription = cleanDesc ? `${cleanDesc} ${auditTag}` : auditTag
 
     try {
       const { data, error } = await supabase.from('issues').insert([
         {
           title: title || `${category} Report`,
           category: category,
-          description: verifiedDescription || description || '',
+          description: verifiedDescription,
           location: location || ward || 'Ward 4',
           ward: ward || 'Ward 4',
           latitude: coords?.lat ?? 26.8467,
@@ -169,7 +167,7 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
           id,
           category: category || 'illegal-dumping',
           location: location.trim(),
-          description: description.trim(),
+          description: cleanDesc,
           priority,
           createdAt: now,
           stepIndex: 0,
@@ -193,6 +191,7 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
       setDescription('')
       setPhotos([])
       setImageUrl(null)
+      setIsDeviceVerified(false)
       setPriority('medium')
       setCoords(null)
       setErrors({})

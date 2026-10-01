@@ -9,6 +9,7 @@ import {
   Send,
   Truck,
   X,
+  XCircle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { CREWS, formatReported, isPickupRequest, type AdminStatus } from '@/lib/admin-data'
+import { stripAuditTags } from '@/lib/cleansync-data'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -140,6 +142,8 @@ export function TicketDetailModal({
       await supabase.from('issues').update({ status: 'In Progress' }).eq('id', selectedIssue.id)
     } else if (newStatus === 'Resolved') {
       await supabase.from('issues').update({ status: 'Resolved' }).eq('id', selectedIssue.id)
+    } else if (newStatus === 'Rejected') {
+      await supabase.from('issues').update({ status: 'Rejected' }).eq('id', selectedIssue.id)
     }
     await onUpdateStatus(selectedIssue.id || selectedIssue.ticket_id, newStatus, crew)
     setLocalTicket((prev: any) => ({
@@ -294,7 +298,15 @@ export function TicketDetailModal({
               No photo attached with this grievance
             </div>
           )}
-          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span>✓</span> Live Capture & Hardware Geotag Verified</div>
+          {(issue.description || '').includes('[VERIFIED') ? (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span>✓</span> Live Camera & Hardware Geotag Verified
+            </div>
+          ) : (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              <span>⚠️</span> Warning: Missing Hardware EXIF (Potential Non-Live Upload)
+            </div>
+          )}
         </div>
 
         {/* Incident Description */}
@@ -304,7 +316,7 @@ export function TicketDetailModal({
           </span>
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
             <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
-              {issue.description || 'No description provided.'}
+              {stripAuditTags(issue.description) || 'No description provided.'}
             </p>
           </div>
         </div>
@@ -380,6 +392,18 @@ export function TicketDetailModal({
             >
               <CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden="true" />
               {isPickup ? 'Mark Pickup Completed' : 'Mark Resolved'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={status === 'Rejected'}
+              onClick={() => handleStatusChange('Rejected')}
+              className="h-8 gap-1.5 text-xs font-medium text-rose-700 border-rose-200 bg-rose-50 hover:bg-rose-100 hover:text-rose-800 disabled:opacity-50 cursor-pointer"
+            >
+              <XCircle className="size-3.5 text-rose-600" aria-hidden="true" />
+              Reject
             </Button>
 
             {localTicket.crew && (

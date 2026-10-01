@@ -1,4 +1,4 @@
-export type AdminStatus = 'Pending' | 'In Progress' | 'Dispatched' | 'Resolved'
+export type AdminStatus = 'Pending' | 'In Progress' | 'Dispatched' | 'Resolved' | 'Rejected'
 
 export type AdminPriority = 'Urgent' | 'High' | 'Medium' | 'Low'
 

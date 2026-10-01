@@ -16,10 +16,12 @@ export async function fetchAdminIssues() {
     .order('created_at', { ascending: false })
 }
 
+export { stripAuditTags } from '@/lib/cleansync-data'
+
 // Status change and dispatch click handlers
 export async function handleStatusUpdate(
   selectedIssue: { id: string },
-  status: 'In Progress' | 'Resolved',
+  status: 'In Progress' | 'Resolved' | 'Rejected',
   setTickets?: React.Dispatch<React.SetStateAction<any[]>>
 ) {
   if (status === 'In Progress') {
@@ -36,6 +38,13 @@ export async function handleStatusUpdate(
     }
     return res
   }
+  if (status === 'Rejected') {
+    const res = await supabase.from('issues').update({ status: 'Rejected' }).eq('id', selectedIssue.id)
+    if (setTickets) {
+      setTickets((prev) => prev.map((t) => (t.id === selectedIssue.id ? { ...t, status: 'Rejected' } : t)))
+    }
+    return res
+  }
 }
 
 // SLA Target label helper
@@ -47,10 +56,27 @@ export function getAdminSlaTarget(priority?: string) {
 }
 
 // Verification tag component / markup
-export function AdminVerificationTag() {
+export function AdminVerificationTag({
+  description,
+  metadata,
+}: {
+  description?: string
+  metadata?: any
+} = {}) {
+  const text = `${description || ''} ${typeof metadata === 'string' ? metadata : JSON.stringify(metadata || '')}`
+  const isVerified = text.includes('[VERIFIED')
+
+  if (isVerified) {
+    return (
+      <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span>✓</span> Live Camera & Hardware Geotag Verified
+      </div>
+    )
+  }
+
   return (
-    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-      <span>✓</span> Live Capture & Hardware Geotag Verified
+    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+      <span>⚠️</span> Warning: Missing Hardware EXIF (Potential Non-Live Upload)
     </div>
   )
 }

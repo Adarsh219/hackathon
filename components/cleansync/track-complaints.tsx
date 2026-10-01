@@ -5,7 +5,7 @@ import { CalendarDays, ChevronDown, MapPin, Truck } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { categoryLabel, statusFromStep, type Ticket, type TicketStatus } from '@/lib/cleansync-data'
+import { categoryLabel, statusFromStep, stripAuditTags, type Ticket, type TicketStatus } from '@/lib/cleansync-data'
 import { TicketTimeline } from './ticket-timeline'
 
 const STATUS_STYLES: Record<TicketStatus, { label: string; className: string }> = {
@@ -134,8 +134,8 @@ export function TrackComplaints({ tickets, highlightId }: TrackComplaintsProps) 
                 </button>
                 {open && (
                   <div id={panelId} className="border-t px-4 pt-4 pb-5 sm:px-5">
-                    {ticket.description && (
-                      <p className="mb-4 text-sm text-pretty text-foreground/80">{ticket.description}</p>
+                    {ticket.description && stripAuditTags(ticket.description) && (
+                      <p className="mb-4 text-sm text-pretty text-foreground/80">{stripAuditTags(ticket.description)}</p>
                     )}
                     <TicketTimeline ticket={ticket} />
                   </div>

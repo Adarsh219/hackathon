@@ -57,6 +57,16 @@ export function categoryLabel(value: IssueCategory | string) {
   return ISSUE_CATEGORIES.find((c) => c.value === value)?.label ?? value
 }
 
+export function stripAuditTags(text?: string | null): string {
+  if (!text) return ''
+  return text
+    .replace(/\[VERIFIED:[^\]]*\]/gi, '')
+    .replace(/\[FLAGGED:[^\]]*\]/gi, '')
+    .replace(/\[VERIFIED\]/gi, '')
+    .replace(/\[FLAGGED\]/gi, '')
+    .trim()
+}
+
 export const INITIAL_TICKETS: Ticket[] = [
   {
     id: 'ISS-104',
