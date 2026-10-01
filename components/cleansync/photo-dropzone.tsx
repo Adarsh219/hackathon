@@ -9,9 +9,11 @@ const MAX_PHOTOS = 4
 type PhotoDropzoneProps = {
   files: File[]
   onChange: (files: File[]) => void
+  onImageChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onBase64Change?: (base64: string | null) => void
 }
 
-export function PhotoDropzone({ files, onChange }: PhotoDropzoneProps) {
+export function PhotoDropzone({ files, onChange, onImageChange, onBase64Change }: PhotoDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -42,6 +44,14 @@ export function PhotoDropzone({ files, onChange }: PhotoDropzoneProps) {
         onDrop={(e) => {
           e.preventDefault()
           setDragging(false)
+          const file = e.dataTransfer.files?.[0]
+          if (file && onBase64Change) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              onBase64Change(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+          }
           addFiles(e.dataTransfer.files)
         }}
         className={cn(
@@ -68,6 +78,8 @@ export function PhotoDropzone({ files, onChange }: PhotoDropzoneProps) {
       </button>
       <input
         ref={inputRef}
+        id="issue-photo"
+        name="photo"
         type="file"
         accept="image/*"
         capture="environment"
@@ -76,6 +88,7 @@ export function PhotoDropzone({ files, onChange }: PhotoDropzoneProps) {
         tabIndex={-1}
         aria-hidden="true"
         onChange={(e) => {
+          onImageChange?.(e)
           addFiles(e.target.files)
           e.target.value = ''
         }}
@@ -87,7 +100,19 @@ export function PhotoDropzone({ files, onChange }: PhotoDropzoneProps) {
               <img src={previews[i] || '/placeholder.svg'} alt={file.name} className="size-full object-cover" />
               <button
                 type="button"
-                onClick={() => onChange(files.filter((_, idx) => idx !== i))}
+                onClick={() => {
+                  const updated = files.filter((_, idx) => idx !== i)
+                  onChange(updated)
+                  if (updated.length === 0) {
+                    onBase64Change?.(null)
+                  } else {
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      onBase64Change?.(reader.result as string)
+                    }
+                    reader.readAsDataURL(updated[0])
+                  }
+                }}
                 className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-foreground/80 text-background transition-opacity hover:bg-foreground"
                 aria-label={`Remove ${file.name}`}
               >

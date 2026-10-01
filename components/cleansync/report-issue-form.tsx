@@ -25,6 +25,7 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [priority, setPriority] = useState<Priority>('medium')
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locating, setLocating] = useState(false)
@@ -32,6 +33,17 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ category?: string; location?: string }>({})
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   function detectLocation() {
     if (!('geolocation' in navigator)) {
@@ -98,7 +110,7 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
         ward: 'Ward 4',
         status: 'Pending',
         priority: priorityCapitalized,
-        image_url: photos.length > 0 ? photos[0] : null,
+        image_url: imageUrl || null,
       }])
 
       if (error) {
@@ -122,8 +134,8 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
           events: [
             {
               at: now,
-              note: photos.length
-                ? `Complaint submitted with ${photos.length} photo${photos.length > 1 ? 's' : ''}.`
+              note: (photos.length > 0 || imageUrl)
+                ? `Complaint submitted with photo evidence.`
                 : 'Complaint submitted via Citizen Portal and recorded to database.',
             },
             null,
@@ -138,6 +150,7 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
       setLocation('')
       setDescription('')
       setPhotos([])
+      setImageUrl(null)
       setPriority('medium')
       setCoords(null)
       setErrors({})
@@ -309,7 +322,12 @@ export function ReportIssueForm({ onCreated, nextNumber = 105, onViewTracker }: 
             <p className="text-right text-xs text-muted-foreground tabular-nums">{description.length}/500</p>
           </div>
 
-          <PhotoDropzone files={photos} onChange={setPhotos} />
+          <PhotoDropzone
+            files={photos}
+            onChange={setPhotos}
+            onImageChange={handleImageChange}
+            onBase64Change={setImageUrl}
+          />
 
           <PrioritySelector value={priority} onChange={setPriority} />
 
